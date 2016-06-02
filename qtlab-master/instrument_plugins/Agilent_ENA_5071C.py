@@ -33,20 +33,30 @@ class Agilent_ENA_5071C(Instrument):
 
         self.add_parameter('power',
             flags=Instrument.FLAG_GETSET, units='dBm', minval=-80, maxval=10, type=types.FloatType)
-        self.add_parameter('rfout',flags=Instrument.FLAG_GETSET, minval=0, maxval=1, type=types.IntType)
-        self.add_parameter('nfpts', flags=Instrument.FLAG_GETSET,minval=2, maxval=1601, type=types.IntType)
-        self.add_parameter('sparam', flags=Instrument.FLAG_GETSET, type=types.StringType)
-        self.add_parameter('fstart', flags=Instrument.FLAG_GETSET, units='Hz', minval=300E3, maxval=20E9, type=types.FloatType)
-        self.add_parameter('fstop', flags=Instrument.FLAG_GETSET, units='Hz', minval=300E3, maxval=20E9, type=types.FloatType)
-        self.add_parameter('ifbw', flags=Instrument.FLAG_GETSET, units='Hz', minval=10, maxval=1500000, type=types.FloatType)
-        self.add_parameter('avgstat', flags=Instrument.FLAG_GETSET, minval=0, maxval=1, type=types.IntType)
-        self.add_parameter('avgnum', flags=Instrument.FLAG_GETSET, minval=1, maxval=999, type=types.IntType)
-        self.add_parameter('trform',flags=Instrument.FLAG_GETSET, type=types.StringType)        
+        self.add_parameter('rfout',
+            flags=Instrument.FLAG_GETSET, minval=0, maxval=1, type=types.IntType)
+        self.add_parameter('nfpts', 
+            flags=Instrument.FLAG_GETSET,minval=2, maxval=1601, type=types.IntType)
+        self.add_parameter('sparam',
+            flags=Instrument.FLAG_GETSET, type=types.StringType)
+        self.add_parameter('fstart', 
+            flags=Instrument.FLAG_GETSET, units='Hz', minval=300E3, maxval=20E9, type=types.FloatType)
+        self.add_parameter('fstop', 
+            flags=Instrument.FLAG_GETSET, units='Hz', minval=300E3, maxval=20E9, type=types.FloatType)
+        self.add_parameter('ifbw', 
+            flags=Instrument.FLAG_GETSET, units='Hz', minval=10, maxval=1500000, type=types.FloatType)
+        self.add_parameter('avgstat', 
+            flags=Instrument.FLAG_GETSET, minval=0, maxval=1, type=types.IntType)
+        self.add_parameter('avgnum', 
+            flags=Instrument.FLAG_GETSET, minval=1, maxval=999, type=types.IntType)
+        self.add_parameter('trform',
+            flags=Instrument.FLAG_GETSET, type=types.StringType)        
         
         self.add_function('reset')
         self.add_function ('get_all')
         self.add_function('getfdata')
         self.add_function('gettrace')
+        self.add_function('trigger')
         
 
         if (reset):
@@ -90,7 +100,11 @@ class Agilent_ENA_5071C(Instrument):
         self.get_avgstat()
         self.get_avgnum()
         self.get_trform()
-        
+    
+    def trigger(self,ch):
+        logging.info(__name__ + ' : trigger')
+        self._visainstrument.write(":INIT%s" % ch)
+    
     def getfdata(self):
         '''
         Gets freq stimulus data, returns array
