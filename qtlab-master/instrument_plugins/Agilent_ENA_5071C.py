@@ -14,7 +14,7 @@ class Agilent_ENA_5071C(Instrument):
     Initialize with
     <name> = instruments.create('<name>', 'Agilent_E5071C', address='<GBIP address>, reset=<bool>')
     '''
-
+    triggered=[False]*159 
     def __init__(self, name, address, reset=False):
         '''
         Initializes the Agilent_E5071C, and communicates with the wrapper.
@@ -57,8 +57,8 @@ class Agilent_ENA_5071C(Instrument):
         self.add_function('getfdata')
         self.add_function('gettrace')
         self.add_function('trigger')
+        self.add_function('continuous_trigger_toggle')
         
-
         if (reset):
             self.reset()
         else:
@@ -100,8 +100,35 @@ class Agilent_ENA_5071C(Instrument):
         self.get_avgstat()
         self.get_avgnum()
         self.get_trform()
-    
-    def trigger(self,ch):
+        
+    def continuous_trigger_toggle(self, ch=1):
+        '''
+        Creates a continues trigger if one is not already present,
+        if a continuous trigger is already in place, this function
+        ends it.
+        
+        Input:
+            ch: The number corresponding to the Channel, defaults to 1
+        '''
+        global triggered
+        triggered[ch-1]=(not triggered[ch-1])
+        logging.info(__name__+"triggered: "+str(triggered))
+        self._visainstrument.write(":INIT%s:CONT%s" % ch, int(triggered[ch-1]))
+        return triggered[ch-1]
+        
+    def trigger(self,ch=1):
+        '''
+        Creates a single trigger and returns to the normal state unless
+        already in a continuous trigger.
+        
+        Input:
+            ch: The number corresponding to the Channel, defaults to 1
+        
+        Output:
+            None
+        '''
+        if triggered[ch-1]:
+            return
         logging.info(__name__ + ' : trigger')
         self._visainstrument.write(":INIT%s" % ch)
     
@@ -133,6 +160,33 @@ class Agilent_ENA_5071C(Instrument):
         data=data.reshape((len(data)/2,2))
         return data.transpose() # mags, phase
         
+    def do_get_continuous_trigger(self, ch=1):
+        '''
+        Reads the state of trigger on a channel
+        
+        Input:
+            ch: defaults to 1, represents the channel to be triggered
+            
+        Output:
+            The state of the channel's trigger
+        '''
+        global triggered
+        logging.debug(__name__+' : get state of continuous trigger in '+
+            'channel %s' % ch)
+        return triggered[ch-1]
+
+    def do_set_continuous_trigger(self, state,ch=1):
+        '''
+        Sets the state of the trigger on a channel
+        
+        Input:
+            state: state desired
+            ch: defaults to 1, the numeric representation of the channel
+        '''
+        global triggered
+        logging.debug(__name__+' : set the state of channel %s to %s' % ch, state)
+        self._visainstrument(':INIT%s:CONT%s' % ch, int(state))
+        triggered[ch-1]=bool(state)
         
     def do_get_power(self):
         '''
