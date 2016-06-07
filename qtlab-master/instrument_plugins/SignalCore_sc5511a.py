@@ -1,79 +1,148 @@
 
-#import usb1
+import usb1
 import types
+import logging
 #import SC5511A_CONSTANTS as constant
 from struct import pack, unpack
 from math import floor
 from instrument import Instrument
 
     
-class SignalCore_sc5511a(Instrument):
-   
-    def __init__(self, name, serial_number=None, address=None):
+class SignalCore_sc5511a(Instrument):       
+    OFF = 0x00
+    ON = 0x01
+    
+    def __init__(self, name, serial_number=None):
         Instrument.__init__(self, name, tags=['generate'])
         self._serial_number = serial_number
-        self.add_parameter('RF1_frequency', type=types.IntType,
-                           flags=Instrument.FLAG_GETSET,
-                           minval = 100000000, maxval=20000000000)
-        self.add_function('set_freq')
-        self.add_function('get_freq')
-######## TEST CODE ############################################################
+        self._handle = None
+        # Methods supported by both Signal Generators
+        self.add_parameter('output_status', type = types.StringType,
+                           flags = Instrument.FLAG_GETSET)
+        self.add_parameter('frequency', type = types.FloatType,
+                           flags=Instrument.FLAG_GETSET, units = ' Hz')
+        self.add_parameter('reference_source', type = types.IntType,
+                           flags = Instrument.FLAG_GET, options_list = [0, 1])
+        self.add_parameter('alc_auto', type = types.IntType,
+                           flags = Instrument.FLAG_GET, options_list = [0, 1])
         
-    def set_freq(self, freq):
-        self._RF1_frequency = freq
-    def get_freq(self):
-        return self._RF1_frequency
-    '''
-    def __del__(self):
-        if self._handle is not None:
-            self._handle.releaseInterface(0)
-            self._handle.close()
-        else:
-            print('Deleting {}'.format(self.serial_number))
-    
-    def open_device_verbose(self):
-        context = usb1.USBContext()
-        if self.serial_number is None:
-            self._handle = context.openByVendorIDAndProductID(sc5511a.SCI_USB_VID,
-                                                    sc5511a.SCI_USB_PID)
-        else:
-            print("I am a unique device") #debug
-        if self._handle is not None:
-            self._handle.resetDevice()
-            self._handle.setConfiguration(1)
-            self._handle.claimInterface(0)
-            print("Turn on the LED")    #debug
-            command = bytearray([sc5511a.SET_SYS_ACTIVE, 0x01])
-            self._handle.controlWrite(0x41, 0, 0, 0, command, 1)
-        else:
-            print("Device not found") #debug
-    
-    
-           
-    def close_device_verbose(self):
-        if self.handle is not None:            
-            print("Closing device")   #  DEVELOP
-            command =  bytearray([sc5511a.SET_SYS_ACTIVE, 0x00])
-            self._handle.controlWrite(0x41, 0, 0, 0, command, 1)
-            self._handle.releaseInterface(0)
-            self._handle.close()
-    def get_device_status_verbose(self):
-        print("Request for status data")
-        command = bytearray([sc5511a.GET_DEVICE_STATUS, 0x00])
-        self._handle.controlWrite(0x41, 0, 0, 0, command, 1)
-        data = self._handle.controlRead(0x41, 0, 0, 0, 4, 10)  # 4 == size in bytes
-        # TODO Decode data in status structure
-        return data
         
-    def set_frequency_verbose(self, frequency):
-        print("Changing the frequency to {}GHz".format(frequency/1,000,000,000))
-        command = bytearray([0x10, 0x02, 0x54, 0x0B, 0xE4, 0x00])
-        self._handle.controlWrite(0x41, 0, 0, 0, command, 1)
-    
-          
-    def test_float_conversion(self, integer):
-        return _to_float32(integer)
-####### END TEST CODE #########################################################
+        self.add_parameter('temperature', type=types.FloatType,
+                           flags=Instrument.FLAG_GET, units= u'\N{DEGREE CELSIUS}')
+        self.reg_write(constant.REFERENCE_MODE, [SignalCore_sc5511a.ON])
+        self.reg_write(constant.RF2_STANDBY, [SignalCore_sc5511a.ON])
+        self.add_function('search_devices')
+        self.add_function('open_device')
+        self.add_function('close_device')
+        self.add_function('get_rf_parameters')
+        self.add_function('get_device_status')
+        self.add_function('get_device_info')
+        self.add_function('get_alc_dac')
+        self.add_function('set_frequency')
+        self.add_function('set_synth_mode')
+        self.add_function('set_rf_mode')
+        self.add_function('set_power_level')
+        self.add_function('set_output')
+        self.add_function('set_alc_mode')
+        self.add_function('set_standby')
+        self.add_function('set_clock_reference')
+        self.add_function('set_reference_dac')
+        self.add_function('set_alc_dac')
+        self.add_function('set_rf2_frequency')
+        self.add_function('set_rf2_standby')
+        self.add_function('list_mode_config')
+        self.add_function('list_start_freq')
+        self.add_function('list_stop_freq')
+        self.add_function('list_step_freq')
+        self.add_function('list_dwell_time')
+        self.add_function('list_cycle_count')
+        self.add_function('list_buffer_points')
+        self.add_function('list_buffer_write')
+        self.add_function('list_buffer_transfer')
+        self.add_function('list_soft_trigger')
+        self.add_function('list_buffer_read')
+        self.add_function('auto_level_disable')
+        self.add_function('store_default_state')
+        self.add_function('synth_self_cal')
+
+## QtLab Methods      
+    def do_get_output_status(self):
+        '''
+        Reads the output status of RF1
+            Output:
+                status (int) : OFF = 0 ; ON = 1
+        '''
+        status = self.reg_read(constant.GET_DEVICE_STATUS, [0x00])      
+        return _invert((status >> 12) & 0x01)#inverted for uniformity
+    def do_set_output_status(self, enable):
+        """
+        Turns the output of RF1 on or off.
+            Input: 
+                enable (int) = OFF = 0 ; ON = 1
+        """
+        self.reg_write(constant.RF_STANDBY, [_invert(enable)])#inverted for uniformity
+
+    def do_get_frequency(self):
+        '''
+        Reads the frequency of RF1
+            Output:
+                frequency (int) : in Hz
+        '''
+        logging.info(__name__ + ' : getting RF1 frequency')
+        return self.reg_read(constant.GET_RF_PARAMETERS, [0x00])
+    def do_set_frequency(self, frequency):
+        """
+        Sets RF1 frequency. Valid between 100MHz and 20GHz
+            Args:
+                frequency (int) = frequency in Hz
+        """
+        if (frequency >= 100000000 and frequency <= 20000000000):
+            return self.reg_write(constant.RF_FREQUENCY, _to_bytearray(frequency))
+        else:
+            return constant.INPUTOUTOFRANGE
+            
+    def do_get_reference_source(self):
+        '''
+        Reads the state of external reference source
+            Output: 
+                state (int) : OFF = 0 ; ON = 1
+        '''
+        logging.info(__name__ + ' : getting reference state')
+        status = self.reg_read(constant.GET_DEVICE_STATUS, [0x00])
+        return (status >> 16) & 0x01
+    def do_set_reference_source(self, enable):
+        '''
+        Sets whether an external reference source is used
+            Input:
+                enable (int) : OFF = 0; ON = 1
+        '''
+        return self.reg_write(constant.REFERENCE_MODE, [enable])
+    def do_get_alc_auto(self):
+        '''
+        Reads the state of ALC
+            Output: 
+                state (int) : OFF = 0 ; ON = 1  
+        '''
+        return _invert((self.reg_read(constant.AUTO_LEVEL_DISABLE,[0x00]) >> 13) & 0x01)#inverted for uniformity
+    def do_set_alc_auto(self, enable):
+        '''
+        Sets whether Auto Leveling is enabled
+            Input:
+                state (int) : OFF = 0 ; ON = 1
+        '''
+        self.reg_write(constant.AUTO_LEVEL_DISABLE, [_invert(enable)])#inverted for uniformity
+        
+    def do_get_temperature(self):
+        """
+        Returns temperature of device
+            Output:
+                temperature (float) : in Celsius?
+        """
+        logging.info(__name__ + ' : getting temperature')
+        temp = self.reg_read(constant.GET_TEMPERATURE,[0x00])
+        return _to_float32(temp)
+
+## device communication        
     def search_devices(self):
         context = usb1.USBContext()
         device_list = []
@@ -87,7 +156,6 @@ class SignalCore_sc5511a(Instrument):
         if self.serial_number is None:
             self._handle = context.openByVendorIDAndProductID(constant.SCI_USB_VID,
                                                     constant.SCI_USB_PID)
-            print("I am a unique device") #debug
         else:
             devices = context.getDeviceList()
             for device in devices:
@@ -99,14 +167,10 @@ class SignalCore_sc5511a(Instrument):
             self._handle.resetDevice()
             self._handle.setConfiguration(1)
             self._handle.claimInterface(0)
-            print("Turn on the LED")    #debug
             self.reg_write(constant.SET_SYS_ACTIVE, [0x01])
-        else:
-            print("Device not found") #debug
             
     def close_device(self):
-        if self.handle is not None:            
-            print("Closing device")   #debug
+        if self._handle is not None:
             self.reg_write(constant.SET_SYS_ACTIVE, [0x00])
             self._handle.releaseInterface(0)
             self._handle.close()
@@ -136,15 +200,7 @@ class SignalCore_sc5511a(Instrument):
             return self._handle.controlRead(0x41, 0, 0, 0, size, 10)
         else:
             return constant.INVALIDCOMMAND
-#--Getters----------------------------------------------------------------------------            
-
-    def get_temperature(self):
-        """
-        Returns temperature of device
-        """
-        temp = self.reg_read(constant.GET_TEMPERATURE,[0x00])
-        return _to_float32(temp)
-        
+##--Getters----------------------------------------------------------------------------               
     def get_rf_parameters(self):
         """
         Gets the current RF parameters such as RF1 frequency, 
@@ -152,24 +208,32 @@ class SignalCore_sc5511a(Instrument):
         """
         params = []
         # rf1 freq
-        params.append(self.reg_read(constant.GET_RF_PARAMETERS, [0x00]))
-        # sweep start freq        
-        params.append(self.reg_read(constant.GET_RF_PARAMETERS, [0x01]))
-        #sweep stop freq        
-        params.append(self.reg_read(constant.GET_RF_PARAMETERS, [0x02]))
-        # sweep step freq        
-        params.append(self.reg_read(constant.GET_RF_PARAMETERS, [0x03]))
-        # sweep dwell time        
-        params.append(self.reg_read(constant.GET_RF_PARAMETERS, [0x04])>>8)
-        #sweep cycles        
-        params.append(self.reg_read(constant.GET_RF_PARAMETERS, [0x05])>>8)
-        # list buffer points        
-        params.append(self.reg_read(constant.GET_RF_PARAMETERS, [0x06])>>8)
+        value = self.reg_read(constant.GET_RF_PARAMETERS, [0x00])
+        params.append(constant.RF_PARAMETERS_TITLES[0] + ' %d' %value)
+        # sweep start freq 
+        value = self.reg_read(constant.GET_RF_PARAMETERS, [0x01])
+        params.append(constant.RF_PARAMETERS_TITLES[1] + ' %d' %value)
+        #sweep stop freq    
+        value = self.reg_read(constant.GET_RF_PARAMETERS, [0x02])
+        params.append(constant.RF_PARAMETERS_TITLES[2] + ' %d' %value)
+        # sweep step freq
+        value = self.reg_read(constant.GET_RF_PARAMETERS, [0x03])    
+        params.append(constant.RF_PARAMETERS_TITLES[3] + ' %d' %value)
+        # sweep dwell time 
+        value = self.reg_read(constant.GET_RF_PARAMETERS, [0x04])>>8
+        params.append(constant.RF_PARAMETERS_TITLES[4] + ' %d' %value)
+        #sweep cycles
+        value = self.reg_read(constant.GET_RF_PARAMETERS, [0x05])>>8        
+        params.append(constant.RF_PARAMETERS_TITLES[5] + ' %d' %value)
+        # list buffer points 
+        value = self.reg_read(constant.GET_RF_PARAMETERS, [0x06])>>8
+        params.append(constant.RF_PARAMETERS_TITLES[6] + ' %d' %value)
         # rf level
-        level = self.reg_read(constant.GET_RF_PARAMETERS, [0x07])>>8        
-        params.append(_to_float32(level))
-        # rf2 freq        
-        params.append(self.reg_read(constant.GET_RF_PARAMETERS, [0x08])>>24)#in MHz
+        value = _to_float32(self.reg_read(constant.GET_RF_PARAMETERS, [0x07])>>8)
+        params.append(constant.RF_PARAMETERS_TITLES[7] + ' %f' %value)
+        # rf2 freq 
+        value = self.reg_read(constant.GET_RF_PARAMETERS, [0x08])>>24
+        params.append(constant.RF_PARAMETERS_TITLES[8] + ' %d' %value)#in MHz
         return params
         
     def get_device_status(self):
@@ -177,8 +241,17 @@ class SignalCore_sc5511a(Instrument):
         Gets the current device status such as the PLL 
         lock status, sweep modes, and other operating conditions.
         """
-        return self.reg_read(constant.GET_DEVICE_STATUS, [0x00])
+        status = self.reg_read(constant.GET_DEVICE_STATUS, [0x00])
+        s_status = []
+        for i in range(len(constant.STATUS_TITLES)):
+            bitshift = i
+            if bitshift >= 22:
+                bitshift += 2
+            value = (status >> bitshift) & 0x01
+            s_status.append('{} : {}\n'.format(constant.STATUS_TITLES[i], value))
+        return s_status
         
+       
     def get_device_info(self):
         """
         Obtains the device information such as serial number,
@@ -186,19 +259,23 @@ class SignalCore_sc5511a(Instrument):
         """
         info = []
         # product serial number
-        info.append(self.reg_read(constant.GET_DEVICE_INFO, [0x00]))
+        value = self.reg_read(constant.GET_DEVICE_INFO, [0x00])
+        info.append(constant.DEVICE_INFO_TITLES[0] + '%s' %value)
         # Hardware Revision Conversion
-        hrc = self.reg_read(constant.GET_DEVICE_INFO, [0x01])
-        info.append(_to_float32(hrc))
+        value = self.reg_read(constant.GET_DEVICE_INFO, [0x01])
+        value = _to_float32(value)
+        info.append(constant.DEVICE_INFO_TITLES[1] + '%s' %value)
         # Firmware Revision Conversion
-        frc = self.reg_read(constant.GET_DEVICE_INFO, [0x02])
-        info.append(_to_float32(frc))
+        value = self.reg_read(constant.GET_DEVICE_INFO, [0x02])
+        value = _to_float32(value)
+        info.append(constant.DEVICE_INFO_TITLES[2] + '%s' %value)
         # Manufacture Date
         date = self.reg_read(constant.GET_DEVICE_INFO, [0x03])
-        info.append([(date>>24) & 0xFF,  # year
-                     (date>>16) & 0xFF,  # month
-                     (date>>8) & 0xFF,   # day
-                     date & 0xFF])       # hour
+        info.append(constant.DEVICE_INFO_TITLES[3] + 
+            ' {}/{}/{} {}'.format((date >> 16) & 0xFF, # month
+                                  (date >> 8) & 0xFF, #day
+                                  (date >> 24) & 0xFF,#year
+                                  date & 0xFF)) #hour
         return info
         
     def get_alc_dac(self):
@@ -208,19 +285,8 @@ class SignalCore_sc5511a(Instrument):
         """
         return self.reg_read(constant.GET_ALC_DAC_VALUE, [0x00])
         
-#--End of Getters---------------------------------------------------------------------        
 #--Setters----------------------------------------------------------------------------            
-    def set_frequency(self, frequency):
-        """
-        Sets RF1 frequency. Valid between 100MHz and 20GHz
-            Args:
-                frequency (int) = frequency in Hz
-        """
-        if (frequency >= 100000000 and frequency <= 20000000000):
-            return self.reg_write(constant.RF_FREQUENCY, _to_bytearray(frequency))
-        else:
-            return constant.INPUTOUTOFRANGE
-            
+           
     def set_synth_mode(self,lock_mode, loop_gain, disable_spur_suppression):
         """
         Sets synthesizer mode of RF1. (see manual for greater detail)
@@ -232,7 +298,6 @@ class SignalCore_sc5511a(Instrument):
         instruction = (disable_spur_suppression << 2| loop_gain << 1 | lock_mode)
         return self.reg_write(constant.SYNTH_MODE, [instruction])
         
-
     def set_rf_mode(self, mode):
         """
         Sets RF1 to fixed tone(0) or sweep(1).
@@ -314,8 +379,7 @@ class SignalCore_sc5511a(Instrument):
     def set_rf2_standby(self, enable):
         """set_standby if enabled powers down channel RF2.
             intput: int enable = (enables/disables standby)"""
-        return self.reg_write(constant.RF2_STANDBY, [enable])
-#--End of Setters-----------------------------------------------------------------------            
+        return self.reg_write(constant.RF2_STANDBY, [enable])           
 
 #--List Mode----------------------------------------------------------------------------
     def list_mode_config(self, sss_mode, sweep_dir, tri_waveform,
@@ -378,7 +442,8 @@ class SignalCore_sc5511a(Instrument):
             the pointer. Writing 0xFFFFFFFFFF will terminate the sequential write operation 
             and sets the list_buffer_points variable to the last pointer value.
             Input: int frequency = (frequency in Hz)"""
-        if (frequency >= 100000000 and frequency >= 20000000000):
+        if (frequency >= 100000000 and frequency >= 20000000000
+            or frequency == 0 or frequency ==0xFFFFFFFFFF):
             return self.reg_write(constant.LIST_BUFFER_WRITE, _to_bytearray(frequency))
         else:
             return constant.INPUTOUTOFRANGE
@@ -422,13 +487,44 @@ class SignalCore_sc5511a(Instrument):
             will reset. The status indicator of RF1 will go off, then red, then amber, and 
             then finally green."""
         return self.reg_write(constant.SYNTH_SELF_CAL, [0x00])
-        
-    """ Value definitions """
+
+#--Helpers---------------------------------------------------------------------
+def _to_float32(integer):
+    """Converts integer value to float maintaining bit structure"""
+    return unpack('f', pack('I', integer))[0]
+    
+def _to_bytearray(integer):
+    """converts integer value to byte representation"""
+    hex_string = hex(integer).lstrip("0x").rstrip("L")
+    if (len(hex_string)%2 != 0):
+        hex_string = '0' + hex_string
+    return bytearray.fromhex(hex_string)
+
+def _power_convert_type(power):
+    if power < 0:
+        x = int(floor(power*(-100) + 0.5)) & 0x7fff | (0x01 << 15)
+    else:        
+        x = int(floor(power*100 + 0.5)) & 0x7fff
+    return x
+    
+def _invert(status):
+    '''
+    Changes ON to OFF since some commands are ON = 1 and others are OFF = 1
+    '''
+    if (status):
+        return SignalCore_sc5511a.OFF
+    else:
+        return SignalCore_sc5511a.ON
+#--End of Helpers--------------------------------------------------------------    
+class constant():
+    """
+    Value definitions
+    """
     #  Define USB SignalCore ID
-    SCI_USB_VID	      =    0x277C  # SignalCore Vendor ID 
-    SCI_USB_PID		=	0x001E  # Product ID SC5511A
-    SCI_SN_LENGTH	      =	0x08	  # SCI serial number length
-    SCI_PRODUCT_NAME	=	"SC5511A"
+    SCI_USB_VID	            =    0x277C  # SignalCore Vendor ID 
+    SCI_USB_PID		      =	0x001E  # Product ID SC5511A
+    SCI_SN_LENGTH	            =	0x08	  # SCI serial number length
+    SCI_PRODUCT_NAME	      =	"SC5511A"
     
     #  Define SignalCore USB endpoints
     SCI_ENDPOINT_IN_INT	=	0x81
@@ -444,7 +540,7 @@ class SignalCore_sc5511a(Instrument):
     
     
     #  Define error codes used 
-    SUCCESS			      =     0
+    SUCCESS                  =     0
     USBDEVICEERROR		=     -1
     USBTRANSFERERROR		=     -2
     INPUTNULL			=     -3
@@ -456,6 +552,9 @@ class SignalCore_sc5511a(Instrument):
     NOREFWHENLOCK		      =	-9
     NORESOURCEFOUND		=	-10
     INVALIDCOMMAND 		=	-11
+    
+    #  System Registers
+    SYNTH_SELF_CAL		=	0x47
     
     #  Define Config registers
     INITIALIZE			=	0x01	# init device
@@ -474,23 +573,50 @@ class SignalCore_sc5511a(Instrument):
     LIST_BUF_MEM_XFER		=	0x0E  # transfer the list frequencies between RAM and EEPROM
     LIST_SOFT_TRIGGER		=	0x0F  # Soft trigger.
     
-    RF_FREQUENCY		      =    0x10	# sets the frequency of RF 1
+    RF_FREQUENCY		      =     0x10	# sets the frequency of RF 1
     RF_LEVEL			=	0x11	# sets Power of RF1
     RF_ENABLE			=	0x12	# enable RF1 output
     RESERVED1			=	0x13  # reserved
-    AUTO_LEVEL_DISABLE	     =	0x14	# Disable leveling at frequency change
+    AUTO_LEVEL_DISABLE	      =	0x14	# Disable leveling at frequency change
     RF_ALC_MODE			=	0x15	# close/open ACL
     RF_STANDBY			=	0x16	# sets RF1 into standby
     REFERENCE_MODE		=	0x17  # reference Settings
     REFERENCE_DAC_VALUE	=	0x18  # set reference DAC
-    ALC_DAC_VALUE		     =	0x19	# control the alc dacs
+    ALC_DAC_VALUE		      =	0x19	# control the alc dacs
     RESERVED2			=	0x1A  # reserved
     STORE_DEFAULT_STATE	=	0x1B	# store the new default state
     RESERVED3			=	0x1C	# reserved
     RESERVED4			=	0x1D	# reserved
     RF2_STANDBY			=     0x1E	# Disables RF2 output and puts circuit into Standby
-    RF2_FREQUENCY		     =	0x1F	# sets RF2 frequency
+    RF2_FREQUENCY		      =	0x1F	# sets RF2 frequency
     
+    CONFIG_REGISTER_SIZES    =   {INITIALIZE:1,
+                                 SET_SYS_ACTIVE:1,
+                                 SYNTH_MODE:1,
+                                 RF_MODE:1,
+                                 LIST_MODE_CONFIG:1,
+                                 LIST_START_FREQ:5,
+                                 LIST_STOP_FREQ:5,
+                                 LIST_STEP_FREQ:5,
+                                 LIST_DWELL_TIME:4,
+                                 LIST_CYCLE_COUNT:4,
+                                 LIST_BUFFER_POINTS:2,
+                                 LIST_BUFFER_WRITE:5,
+                                 LIST_BUF_MEM_XFER:1,
+                                 LIST_SOFT_TRIGGER:1,
+                                 RF_FREQUENCY:5,
+                                 RF_LEVEL:2,
+                                 RF_ENABLE:1,
+                                 AUTO_LEVEL_DISABLE:1,
+                                 RF_ALC_MODE:1,
+                                 RF_STANDBY:1,
+                                 REFERENCE_MODE:1,
+                                 REFERENCE_DAC_VALUE:2,
+                                 ALC_DAC_VALUE:2,
+                                 STORE_DEFAULT_STATE:1,
+                                 RF2_STANDBY:1,
+                                 RF2_FREQUENCY:2,
+                                 SYNTH_SELF_CAL:1}
     #  Query Registers
     GET_RF_PARAMETERS		=	0x20	# Get the sweep parameters such as rf_frequency, start_freq, stop_freq, ...etc
     GET_TEMPERATURE		=	0x21  # load sensor temperature into the SPI output buffer
@@ -499,46 +625,27 @@ class SignalCore_sc5511a(Instrument):
     GET_LIST_BUFFER		=	0x24	# read the contents of the list buffer in RAM
     GET_ALC_DAC_VALUE		=	0x25  # get current ALC value
     GET_SERIAL_OUT_BUFFER	=	0x26	# SPI out buffer (not used in USB)
-    QUERY_REGISTER_SIZES    =    {GET_RF_PARAMETERS:5,
-                               GET_TEMPERATURE:4,
-                               GET_DEVICE_STATUS:4,
-                               GET_DEVICE_INFO:4,
-                               GET_LIST_BUFFER:4,
-                               GET_ALC_DAC_VALUE:2}
-    #  System Registers
-    SYNTH_SELF_CAL		=	0x47
+    
+    QUERY_REGISTER_SIZES     =   {GET_RF_PARAMETERS:5,
+                                 GET_TEMPERATURE:4,
+                                 GET_DEVICE_STATUS:4,
+                                 GET_DEVICE_INFO:4,
+                                 GET_LIST_BUFFER:4,
+                                 GET_ALC_DAC_VALUE:2}
+    
+    STATUS_TITLES = ['PLL_status:sum', 'PLL_status:crs', 'PLL_status:fine', 'PLL_status:crs_ref', 
+                     'PLL_status:crs_aux', 'PLL_status:ref_VCXO', 'PLL_status:ref_TCXO', 
+                     'PLL_status:rf2', 'lock_mode', 'loop_gain', 'device_access', 'rf2_standby', 
+                     'rf1_standby', 'auto_level', 'alc_mode', 'RF1_enable', 'ext_ref_lock', 
+                     'ext_ref_detect','ref_out_select', 'list_running', 'RF1_mode', 'over_temp', 
+                     'List Config: SSS', 'List Config: Sweep Dir', 'List Config: Waveform', 
+                     'List Config: HW Trig', 'List Config: Step Trig','List Config: Ret. to Start', 
+                     'List Config: Trig Out Enable', 'List Config: Trig Out Mode']
+                     
+    DEVICE_INFO_TITLES = ['Serial #', 'Hardware Revision', 'Firmware Revision', 'Manufacture Date']
+    
+    RF_PARAMETERS_TITLES = ['RF1 frequency', 'Sweep start freq', 'Sweep stop freq', 'Sweep step freq',
+                     'Sweep dwell time', 'Sweep cycles', 'List buffer points', 'RF level', 'RF2 freq']
     
     # Note that all registers 0x27 to 0x50 are reserved for factory use. Writing to them accidentally may cause the 
     # device to functionally fail.
-#--Helpers---------------------------------------------------------------------
-def _to_float32(integer):
-    """Converts integer value to float maintaining bit structure"""
-    return unpack('f', pack('I', integer))[0]
-    
-def _to_bytearray(integer):
-    """converts integer value to byte representation"""
-    hex_string = hex(integer).lstrip("0x").rstrip("L")
-    if (len(hex_string)%2 != 0):
-        hex_string = '0' + hex_string
-    return bytearray.fromhex(hex_string)
-    
-def _power_convert_type(power):
-    if power < 0:
-        x = int(floor(power*(-100) + 0.5)) & 0x7fff | (0x01 << 15)
-    else:        
-        x = int(floor(power*100 + 0.5)) & 0x7fff
-    return x
-#--End of Helpers--------------------------------------------------------------    
-def main():
-    
-    a = sc5511a()
-#    a.open_device()
-#    print(a.get_device_status())
-#    time.sleep(1)
-#    a.set_frequency_verbose(10000000000)
-#    a.close_device()
-    print type(a)    
-
-if __name__ == '__main__':
-    main()
-'''

@@ -7,6 +7,7 @@ AWG = qt.instruments.create('AWG','AWG5014C', address='TCPIP0::169.254.47.254::i
 MXA = qt.instruments.create('MXA','Aglient_MXA_N9020A',address='TCPIP0::169.254.180.116::INSTR')
 #SWT = qt.instruments.create('SWT','Mini_CircuitsSwitch',address='http://169.254.47.255')
 GEN = qt.instruments.create('GEN','SignalCore_sc5511a')
+EXG = qt.instruments.create('testgen', 'Keysight_N5183B', address='TCPIP0::169.254.76.85::inst0::INSTR', reset = False)
 RecordTest = qt.instruments.create('RecordTest','RecordTest_driver',address='GPIB::2')
 combined.add_variable_scaled('magnet', example1, 'chA_output', 0.02, -0.13, units='mT')
 
