@@ -25,7 +25,10 @@ class SignalCore_sc5511a(Instrument):
                            flags = Instrument.FLAG_GET, options_list = [0, 1])
         self.add_parameter('alc_auto', type = types.IntType,
                            flags = Instrument.FLAG_GET, options_list = [0, 1])
-        
+        self.get_output_status()
+        self.get_frequency()
+        self.get_reference_source()
+        self.get_alc_auto()
         
         self.add_parameter('temperature', type=types.FloatType,
                            flags=Instrument.FLAG_GET, units= u'\N{DEGREE CELSIUS}')

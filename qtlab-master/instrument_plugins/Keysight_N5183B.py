@@ -23,6 +23,10 @@ class Keysight_N5183B(Instrument):
                            flags = Instrument.FLAG_GET)
         self.add_parameter('alc_auto', flags = Instrument.FLAG_GETSET, 
                            type = types.IntType, options_list = [0,1])
+        self.get_output_status()
+        self.get_frequency()
+        self.get_reference_source()
+        self.get_alc_auto()
         
          # Phase
         self.add_parameter('phase_reference', flags = Instrument.FLAG_SET)
