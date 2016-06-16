@@ -97,7 +97,7 @@ class Agilent_ENA_5071C(Instrument):
         self.add_parameter('fspan', flags=Instrument.FLAG_GETSET,
                            type=types.FloatType, units='Hz')        
         
-        self.add_parameter('cwfrq', flags=Instrument.FLAG_GETSET,
+        self.add_parameter('cwfreq', flags=Instrument.FLAG_GETSET,
                            type=types.FloatType, units='Hz')        
         
         self.add_parameter('math', flags=Instrument.FLAG_GETSET,
@@ -290,8 +290,8 @@ class Agilent_ENA_5071C(Instrument):
         Output:
             None
         '''
-        logging.debug(__name__+": set state of correction to "+correction)
-        self._visainstrument.write(":SENS1:CORR:STAT "+correction)
+        logging.debug(__name__+": set state of correction to "+str(correction))
+        self._visainstrument.write(":SENS1:CORR:STAT "+str(correction))
     
     def do_get_smoothing(self):
         '''
@@ -372,8 +372,8 @@ class Agilent_ENA_5071C(Instrument):
         Output:
             None
         '''
-        logging.debug(": Set the cw frequency to "+cw)   
-        self._visainstrument.write(":SENS1:FREQ "+cw)
+        logging.debug(": Set the cw frequency to "+str(cw))   
+        self._visainstrument.write(":SENS1:FREQ "+str(cw))
         
     def do_get_auto_sweep(self):
         '''
@@ -674,7 +674,7 @@ class Agilent_ENA_5071C(Instrument):
         logging.debug(__name__ + ': set fstop to %s' % fstop)
         self._visainstrument.write(':SENS1:FREQ:STOP %s' % fstop)
     
-    def do_get_fcenter(self, center):
+    def do_get_fcenter(self):
         '''
         Get the frequency center
         
@@ -685,7 +685,7 @@ class Agilent_ENA_5071C(Instrument):
             center freq (Hz)
         '''
         logging.debug(__name__+": get fcenter")
-        self._visainstrument.ask(":SENS1:FREQ:CENT?")
+        return self._visainstrument.ask(":SENS1:FREQ:CENT?")
     
     def do_set_fcenter(self, center):
         '''
@@ -698,9 +698,9 @@ class Agilent_ENA_5071C(Instrument):
             None
         '''
         logging.debug(__name__+": set fcenter")
-        self._visainstrument.write(":SENS1:FREQ:CENT "+center)
+        self._visainstrument.write(":SENS1:FREQ:CENT "+str(center))
     
-    def do_get_fspan(self, span):
+    def do_get_fspan(self):
         '''
         Get the frequency span
         
@@ -711,7 +711,7 @@ class Agilent_ENA_5071C(Instrument):
             span freq (Hz)
         '''
         logging.debug(__name__+": get fspan")
-        self._visainstrument.ask(":SENS1:FREQ:SPAN?")
+        return self._visainstrument.ask(":SENS1:FREQ:SPAN?")
     
     def do_set_fspan(self, span):
         '''
@@ -724,7 +724,7 @@ class Agilent_ENA_5071C(Instrument):
             None
         '''
         logging.debug(__name__+": set fcenter")
-        self._visainstrument.write(":SENS1:FREQ:SPAN "+center)
+        self._visainstrument.write(":SENS1:FREQ:SPAN "+str(span))
     
     
     def do_get_ifbw(self):
@@ -879,7 +879,7 @@ class Agilent_ENA_5071C(Instrument):
             'POW'=Power
         '''
         logging.debug(__name__+": Set the sweep type to "+sweep)
-        self._visainstrument(":SENS1:SWE:TYPE "+sweep.upper())
+        self._visainstrument.write(":SENS1:SWE:TYPE "+sweep.upper())
     # shortcuts
     def off(self):
         '''
