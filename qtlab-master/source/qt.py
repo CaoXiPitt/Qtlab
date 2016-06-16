@@ -32,6 +32,9 @@ plots = Plot.get_named_list()
 
 def version():
     version_file = os.path.join(config['execdir'], 'VERSION')
+    print config['execdir']
+    print version_file
+    
     try:
         f = file(version_file,'r')
         str = f.readline()

@@ -264,11 +264,11 @@ class FlowControl(SharedGObject):
         curdir = os.getcwd()
         os.chdir(qt.config['execdir'])
 
-        args = ['-p', str(qt.config['port']), '--name', qt.config['instance_name']]
+        args = [str('-p'), str(qt.config['port']), str('--name'), str(qt.config['instance_name'])]
         args.extend(arg_list)
         if os.name == 'nt':
             args.insert(0, '%s.bat' % program)
-            os.spawnv(os.P_NOWAIT, '%s.bat' % program, args)
+            os.spawnv(os.P_NOWAIT, str('{}.bat'.format(program)), args)
         if os.name == 'posix':
             args.insert(0, '%s' % program)
             pid = os.spawnv(os.P_NOWAIT, program, args)

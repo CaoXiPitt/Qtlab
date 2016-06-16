@@ -22,6 +22,8 @@ def _close_gui_cb(*args):
     sys.exit()
 
 if __name__ == "__main__":
+    print args.host
+    print args.port
     srv = share_gtk.start_client(args.host, port=args.port, nretry=60)
     logging.debug('Connected to %s', srv.get_instance_name())
 

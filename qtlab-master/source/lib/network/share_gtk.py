@@ -38,10 +38,16 @@ def start_server(host='', port=objsh.PORT):
 def start_client(host, port=objsh.PORT, nretry=1):
     while nretry > 0:
         try:
+            print host
+            print port
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            print sock
             sock.connect((host, port))
+            print '1'
             handler = Handler(sock, 'client', 'server')
+            print '2'
             setup_glib_flush_queue()
+            print '3'
             return handler.client
         except Exception, e:
             logging.warning('Failed to start sharing client: %s', str(e))
