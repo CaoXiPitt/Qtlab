@@ -153,18 +153,31 @@ class Agilent_ENA_5071C(Instrument):
         self.get_sparam()
         self.get_fstart()
         self.get_fstop()
+        self.get_fcenter()
+        self.get_fspan()
         self.get_ifbw()
         self.get_avgstat()
         self.get_avgnum()
         self.get_trform()
-    
+        self.get_trigger_scope()
+        self.get_trigger_source()
+        self.get_correction()
+        self.get_smoothing()
+        self.get_cwfreq()
+        self.get_auto_sweep()
+        self.get_time_sweep()
+        self.get_point_trigger()
+        self.get_avg_trigger()
+        self.get_continuous_trigger()
+        self.get_math()
+        self.get_sweep_type()
     def wait(self):
         '''
         
         '''
         print("I should be waiting")
         
-        var= self._visainstrument.ask("SCPI.IEEE4882.OPC?")
+        var= self._visainstrument.ask("*OPC?")
         return var
     
     def average(self, number):
