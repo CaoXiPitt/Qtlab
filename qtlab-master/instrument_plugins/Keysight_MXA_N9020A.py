@@ -45,7 +45,8 @@ class Keysight_MXA_N9020A(Instrument):
                            options_list = ['EXT1', 'EXTERNAL1', 'EXT2', 'EXTERNAL2',
                                            'IMM', 'IMMEDIATE', 'BUS'])
         self.add_parameter('bus_trigger', type = types.StringType)
-        self.add_parameter('comm', type=types.StringType)        
+        self.add_parameter('comm', type=types.StringType)
+        self.add_parameter('trace', type=types.IntType)
         self.add_function('get_all')
         self.get_all()
             
@@ -229,6 +230,16 @@ class Keysight_MXA_N9020A(Instrument):
         
     def do_get_bus_trigger(self):
         return self._visainstrument.ask(':SOUR:TRIG:TYPE?')
+        
+    def do_get_comm(self):
+        return self._visainstrument.ask(':SYST:COMM:SOUR[1]:ADDR?')
+        
+    def do_set_comm(self, address):
+        self._visainstrument.write(':SYST:COMM:SOUR[1]:ADDR "%s"' %address)
+    def do_get_trace(self, channel):
+        return self._visainstrument.ask('TRAC[%s]:DISP?' %channel)
+    def do_set_trace(self, channel, enable):
+        self._visainstrument.write('TRAC[{}]:DISP {}'.format(channel, enable))
     def get_all(self):
         self.get_frequency_center()
         self.get_frequency_start()
