@@ -28,6 +28,7 @@ def setup_glib_flush_queue():
 def start_server(host='', port=objsh.PORT):
     try:
         server = tcpservergtk.GlibTCPServer((host, port), Handler, '127.0.0.1')
+        print (server)
         objsh.SharedObject.server = server
         setup_glib_flush_queue()
         return True
@@ -38,6 +39,8 @@ def start_server(host='', port=objsh.PORT):
 def start_client(host, port=objsh.PORT, nretry=1):
     while nretry > 0:
         try:
+            print (host)
+            print (port)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((host, port))
             handler = Handler(sock, 'client', 'server')

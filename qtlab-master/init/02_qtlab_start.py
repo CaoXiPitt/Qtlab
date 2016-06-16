@@ -39,6 +39,7 @@ objsh.root.set_instance_name(iname)
 print 'Setting instance name to %s' % iname
 from lib.network import share_gtk
 share_gtk.start_server('localhost', port=_cfg.get('port', objsh.PORT))
+_cfg['allowed_ips']=[]
 for _ipaddr in _cfg['allowed_ips']:
     objsh.SharedObject.server.add_allowed_ip(_ipaddr)
 objsh.PythonInterpreter('python_server', globals())
@@ -64,8 +65,8 @@ except:
     pass
 
 # Auto-start GUI
-if qt.config.get('startgui', True):
-    qt.flow.start_gui()
+#if qt.config.get('startgui', True):
+#    qt.flow.start_gui()
 
 temp.File.set_temp_dir(qt.config['tempdir'])
 

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+"""
+A driver to control the Keysight MXG Analog Signal Generator N5183B using Qtlab
+
+@author: Hatlab - Erick Brindock
+"""
 from instrument import Instrument
 import visa
 import types

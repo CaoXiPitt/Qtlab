@@ -16,7 +16,7 @@ config['instance_name'] = 'qtlab_n1'
 config['port'] = 12002
 
 # A list of allowed IP ranges for remote connections
-config['allowed_ips'] = (
+config['allowed_ips'] = (                                       # Modified
 #    '130.161.*.*',
 #    '145.94.*.*',
 )
