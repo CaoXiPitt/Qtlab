@@ -57,7 +57,6 @@ def cmd(cmd, callback=None):
     return interpreter.cmd(cmd, callback=callback)
 
 def replot_all():
-    print('replot_all called from qtclient')
     cmd('qt.replot_all()', callback=lambda x:None)
 
 def format_parameter_value(opt, val):

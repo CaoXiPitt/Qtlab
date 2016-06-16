@@ -43,8 +43,10 @@ class Keysight_MXA_N9020A(Instrument):
                            options_list = [0,1])                   
         self.add_parameter('trigger_source', type = types.StringType,
                            options_list = ['EXT1', 'EXTERNAL1', 'EXT2', 'EXTERNAL2',
-                                           'IMM', 'IMMEDIATE'])
+                                           'IMM', 'IMMEDIATE', 'BUS'])
         self.add_function('get_all')
+        self.add_function('do_set_bus_trigger')
+        self.add_function('do_get_buss_trigger')
         self.get_all()
             
     def do_get_frequency_center(self):
@@ -223,7 +225,10 @@ class Keysight_MXA_N9020A(Instrument):
         '''
         test method to see if this command is functional
         '''
-        self._visainstrument.write('SOUR:TRIG:TYPE %s' %source)
+        self._visainstrument.write(':SOUR:TRIG:TYPE %s' %source)
+        
+    def do_get_bus_trigger(self):
+        return self._visainstrument.ask(':SOUR:TRIG:TYPE?')
     def get_all(self):
         self.get_frequency_center()
         self.get_frequency_start()
@@ -234,4 +239,5 @@ class Keysight_MXA_N9020A(Instrument):
         self.get_bandwidth_video()
         self.get_bandwidth_video_auto()
         self.get_trigger_source()
+        
         
