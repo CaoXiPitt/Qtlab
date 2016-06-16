@@ -164,7 +164,7 @@ class Agilent_ENA_5071C(Instrument):
         '''
         print("I should be waiting")
         
-        var= self._visainstrument.ask("*OPC?")
+        var= self._visainstrument.ask("SCPI.IEEE4882.OPC?")
         return var
     
     def average(self, number):
@@ -428,7 +428,8 @@ class Agilent_ENA_5071C(Instrument):
         Output:
             None
         '''
-        
+        if(self.get_auto_sweep()):
+            self.set_auto_sweep(0)
         logging.debug(__name__ + ": set the time of the sweep to "+str(time))
         self._visainstrument.write(":SENS1:SWE:TIME "+ str(time))
     
