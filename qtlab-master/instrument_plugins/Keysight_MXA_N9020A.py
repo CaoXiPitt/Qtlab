@@ -238,8 +238,10 @@ class Keysight_MXA_N9020A(Instrument):
         self._visainstrument.write(':SYST:COMM:SOUR[1]:ADDR "%s"' %address)
     def do_get_trace(self, channel):
         return self._visainstrument.ask('TRAC%s:DISP?' %channel)
-    def do_set_trace(self, enable):
+    def do_set_trace(self, channel, enable):
+        print('TRAC{}:DISP {}'.format(channel, enable))
         self._visainstrument.write('TRAC1:DISP %s' % enable)
+        
     def get_all(self):
         self.get_frequency_center()
         self.get_frequency_start()
