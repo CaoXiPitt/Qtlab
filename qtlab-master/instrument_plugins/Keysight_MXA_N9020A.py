@@ -42,11 +42,13 @@ class Keysight_MXA_N9020A(Instrument):
         self.add_parameter('bandwidth_video_auto', type = types.IntType,
                            options_list = [0,1])                   
         self.add_parameter('trigger_source', type = types.StringType,
-                           options_list = ['EXT1', 'EXTERNAL1', 'EXT2', 'EXTERNAL2',
-                                           'IMM', 'IMMEDIATE', 'BUS'])
-        self.add_parameter('bus_trigger', type = types.StringType)
-        self.add_parameter('comm', type=types.StringType)
-        self.add_parameter('trace', type=types.IntType)
+                           options_list = ['ext1', 'external1', 'ext2', 'external2',
+                                           'imm', 'immediate'])
+
+        self.add_parameter('trace', type=types.ListType)
+        self.add_parameter('trace_type', type=types.StringType,
+                           options_list = ['writ', 'write', 'aver', 'average',
+                                           'maxh', 'maxhold', 'minh', 'minhold'])
         self.add_function('get_all')
         self.get_all()
             
@@ -218,29 +220,21 @@ class Keysight_MXA_N9020A(Instrument):
             Input:
                 source (string) : the source to be used as the trigger
         '''
+        source = source.lower()
         logging.info(__name__ + ' : Setting the source of the trigger to %s' % source)
         self._visainstrument.write('TRIG:SOUR %s' %source)
     
-    def do_set_bus_trigger(self, source='BUS'):
-        #TODO test this method for functionality
-        '''
-        test method to see if this command is functional
-        '''
-        self._visainstrument.write(':SOUR:TRIG:TYPE %s' %source)
-        
-    def do_get_bus_trigger(self):
-        return self._visainstrument.ask(':SOUR:TRIG:TYPE?')
-        
-    def do_get_comm(self):
-        return self._visainstrument.ask(':SYST:COMM:SOUR[1]:ADDR?')
-        
-    def do_set_comm(self, address):
-        self._visainstrument.write(':SYST:COMM:SOUR[1]:ADDR "%s"' %address)
+
     def do_get_trace(self, channel):
         return self._visainstrument.ask('TRAC%s:DISP?' %channel)
-    def do_set_trace(self, channel, enable):
-        print('TRAC{}:DISP {}'.format(channel, enable))
-        self._visainstrument.write('TRAC1:DISP %s' % enable)
+    def do_set_trace(self, channel):
+        self._visainstrument.write('TRAC{}:DISP {}'.format(channel[0], channel[1]))
+        
+    def do_get_trace_type(self, channel):
+        return self._visainstrument.ask('TRAC{}:TYPE?'.format(channel))
+    def do_set_trace_type(self, channel = 1, trace_type):
+        trace_type = trace_type.lower()
+        self._visainstrument.write('TRAC{}:TYPE {}'.format(channel, trace_type))
         
     def get_all(self):
         self.get_frequency_center()
