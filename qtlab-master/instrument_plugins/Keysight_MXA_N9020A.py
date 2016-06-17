@@ -46,9 +46,7 @@ class Keysight_MXA_N9020A(Instrument):
                                            'imm', 'immediate'])
 
         self.add_parameter('trace', type=types.ListType)
-        self.add_parameter('trace_type', type=types.StringType,
-                           options_list = ['writ', 'write', 'aver', 'average',
-                                           'maxh', 'maxhold', 'minh', 'minhold'])
+        self.add_parameter('trace_type', type=types.StringType)
         self.add_function('get_all')
         self.get_all()
             
@@ -229,13 +227,13 @@ class Keysight_MXA_N9020A(Instrument):
         return self._visainstrument.ask('TRAC%s:DISP?' %channel)
     def do_set_trace(self, channel):
         self._visainstrument.write('TRAC{}:DISP {}'.format(channel[0], channel[1]))
-        
+            
     def do_get_trace_type(self, channel):
-        return self._visainstrument.ask('TRAC{}:TYPE?'.format(channel))
-    def do_set_trace_type(self, channel = 1, trace_type):
+        return self._visainstrument.ask('TRAC{}:TYPE?'.format(channel[0]))
+    def do_set_trace_type(self, trace_type):
         trace_type = trace_type.lower()
-        self._visainstrument.write('TRAC{}:TYPE {}'.format(channel, trace_type))
-        
+        self._visainstrument.write('TRAC{}:TYPE {}'.format(1, trace_type))
+
     def get_all(self):
         self.get_frequency_center()
         self.get_frequency_start()
