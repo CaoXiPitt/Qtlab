@@ -106,6 +106,9 @@ class Agilent_ENA_5071C(Instrument):
         self.add_parameter('sweep_type', flags=Instrument.FLAG_GETSET,
                            type=types.StringType)
         
+        self.add_parameter('electrical_delay', flags=Instrument.FLAG_GETSET,
+                           type=types.FloatType)
+        
         self.add_function('reset')
         self.add_function('get_all')
         self.add_function('getfdata')
@@ -171,6 +174,7 @@ class Agilent_ENA_5071C(Instrument):
         self.get_continuous_trigger()
         self.get_math()
         self.get_sweep_type()
+        self.get_electrical_delay()
     def wait(self):
         '''
         
@@ -222,6 +226,32 @@ class Agilent_ENA_5071C(Instrument):
             return
         logging.info(__name__ + ' : trigger')
         self._visainstrument.write(":INIT %s" % ch)
+
+     def do_get_electrical_delay(self):
+        '''
+        Gets the length of the electrical delay in seconds
+        
+        Input:
+            None
+        
+        Output:
+            None
+        '''
+        logging.info(__name__ + "get the electrical delay length (seconds)")
+        return self._visainstrument.ask(":CALC1:CORR:EDEL:TIME?")
+        
+    def do_set_electrical_delay(self, time):
+        '''
+        Sets the length of the electrical delay in seconds
+        
+        Input:
+            time= Amount of time to simulate as a delay in seconds
+            
+        Output:
+            None
+        '''
+        logging.info(__name__ + "set the electrical delay length (seconds)")
+        self.__visainstrument.write(":CALC1:CORR:EDEL:TIME")    
     
     def do_get_trigger_scope(self):
         '''
