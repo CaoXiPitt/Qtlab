@@ -180,9 +180,11 @@ class Agilent_ENA_5071C(Instrument):
         
         '''
         print("I should be waiting")
-        
-        var= self._visainstrument.ask("*OPC?")
-        return var
+        cont=True
+        while(cont):
+            try:
+                self.get_fdata()
+                cont=False
     
     def average(self, number):
         '''
