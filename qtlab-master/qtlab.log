@@ -6304,3 +6304,4 @@
 2016-06-29 14:03 INFO    : Yokogawa_GS200 : Initializing instrument Yokogawa GS200 (Yokogawa_GS200.py:28)
 2016-06-29 14:03 WARNING : Get not implemented for Yokogawa_GS200.output_level_auto (instrument.py:1179)
 2016-06-29 14:03 WARNING : Set not implemented for Yokogawa_GS200.output_level_auto (instrument.py:1183)
+2016-06-29 14:24 INFO    : Emitting close-gui signal (qtflow.py:281)
