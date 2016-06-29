@@ -6141,6 +6141,7 @@
 2016-06-29 12:09 WARNING : Set not implemented for Yokogawa_GS200.output_level_auto (instrument.py:1183)
 2016-06-29 13:32 INFO    : Emitting close-gui signal (qtflow.py:281)
 <<<<<<< HEAD
+<<<<<<< HEAD
 2016-06-29 13:48 INFO    : psyco acceleration not enabled (02_qtlab_start.py:55)
 2016-06-29 13:48 INFO    : Resetting example instrument (example.py:82)
 2016-06-29 13:48 WARNING : Current value not available, ignoring maxstep (instrument.py:944)
@@ -6306,5 +6307,7 @@
 2016-06-29 14:03 WARNING : Get not implemented for Yokogawa_GS200.output_level_auto (instrument.py:1179)
 2016-06-29 14:03 WARNING : Set not implemented for Yokogawa_GS200.output_level_auto (instrument.py:1183)
 2016-06-29 14:24 INFO    : Emitting close-gui signal (qtflow.py:281)
+=======
+>>>>>>> parent of 599803e... Changes
 =======
 >>>>>>> parent of 599803e... Changes
