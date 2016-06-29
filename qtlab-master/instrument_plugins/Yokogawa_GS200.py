@@ -10,7 +10,6 @@ import visa
 import types
 import logging
 import time
-import threading
 import numpy as np
 
 MIN_CURR = 1E-3
@@ -30,6 +29,7 @@ class Yokogawa_GS200(Instrument):
         Instrument.__init__(self, name, tags=['physical'])
         self._address = address
         self._visainstrument = visa.instrument(self._address)
+        self._visainstrument.term_chars = '\r'
         
         self.add_parameter('output', type = types.IntType,
                            options_list = [0,1])
@@ -44,22 +44,20 @@ class Yokogawa_GS200(Instrument):
         self.add_function('test_program_function')
         self.add_function('create_csv')
         self.add_function('set_intervals')
+        self.add_function('create_program')
         self.add_function('save_setup')
         self.add_function('load_setup')           
         self.add_function('send_instruction')
         self.add_function('retrieve_data')
         self.add_function('reset')
         self.add_function('get_all')
-        self.write_termination = None
-        self.ask_termination = None
         
         if reset:
             self.reset()
         #else:
             #self.get_all()
 
-##  Parameters  ###############################################################
-               
+##  Parameters  ##############################################################             
     def do_get_output(self):
         '''
         Reads the output state
@@ -111,7 +109,7 @@ class Yokogawa_GS200(Instrument):
                 values are:  max | min | up | down | <level> in A    
         '''
         possible_strings = ['max', 'min', 'up', 'down']
-        self._check_input_validity(_range, possible_strings, 
+        _range = self._check_input_validity(_range, possible_strings, 
                                   MIN_CURR, MAX_CURR)
         self._log('Setting the output range to %s' %_range)
         self._visainstrument.write(':sour:rang %s')
@@ -131,7 +129,7 @@ class Yokogawa_GS200(Instrument):
                 level (string | <float>) : level produced max | min | <level>
         '''
         possible_strings = ['max', 'min']
-        self._check_input_validity(level, possible_strings)
+        level = self._check_input_validity(level, possible_strings)
         self._log('Setting the source level to %s' %level)
         self._visainstrument.write(':sour:lev %s' %level)
         
@@ -142,7 +140,7 @@ class Yokogawa_GS200(Instrument):
                 limit (string) : current limit level max | min | <level>
         '''
         self._log('Reading the current limit level')
-        self._visainstrument.ask(':sour:prot:curr?')
+        return self._visainstrument.ask(':sour:prot:curr?')
     def do_set_output_protection(self, limit):
         '''
         Sets the current limit level
@@ -200,11 +198,12 @@ class Yokogawa_GS200(Instrument):
         self._visainstrument.write('*RST;:sour:func curr')
     
     def get_all(self):
-        self.get_output()
-        self.get_output_function()
-        self.output_range()
+        #self.get_output()
+        #self.get_output_function()
+        #time.sleep(1)
+        #self.output_range()
         self.output_level()
-        self.output_level_auto()
+        #self.output_level_auto()
         self.output_protection()
 
 ##  Helpers  #################################################################
@@ -215,15 +214,19 @@ class Yokogawa_GS200(Instrument):
         try:
             testval = float(testval)
             if (minval is not None) and testval < minval:
-                raise ValueError('Min')
+                logging.warning('{} is out of bounds. Setting to {}'
+                                .fromat(testval, minval))
+                testval = minval
             if maxval is not None and testval > maxval:
-                raise ValueError('Max')
+                logging.warning('{} is out of bounds. Setting to {}'
+                                .fromat(testval, maxval))
+                testval = maxval
         except:
             if testval.lower() not in strings:
                 raise ValueError('%s is not a valid input' %testval)
         return testval
         
-    def create_csv(self, step = 1e-3, minval=.001, maxval=.2):
+    def create_csv(self, stepval = 1e-3, minval=.001, maxval=.2):
         '''
         creates a list of currents formatted to be transferred to the Yokogawa 
         unit
@@ -237,29 +240,47 @@ class Yokogawa_GS200(Instrument):
                 of the form '<level>, <range>, <output type>' 
         '''
         string = ''
-        source_range = .200
         source_type = 'I'
-        if step>0:
+        if stepval>0:
             value = minval
             while value < maxval:
-                string += '{},{},{}\n'.format(value, source_range, 
+                string += '{},{},{}\n'.format(value, self.set_range(value), 
                                                 source_type)
-                value += step
-            string += '{},{},{}\n'.format(maxval, source_range, source_type)
+                value += stepval
+            string += '{},{},{}\n'.format(maxval, 
+                                    self.set_range(maxval), source_type)
         else:
             value = maxval
             while value > minval:
-                string += '{},{},{}\n'.format(value, source_range, 
+                string += '{},{},{}\n'.format(value, self.set_range(value), 
                                                 source_type)
-                value += step
-            string += '{},{},{}\n'.format(minval, source_range, source_type)
+                value += stepval
+            string += '{},{},{}\n'.format(minval, 
+                                    self.set_range(minval), source_type)
         return string
+        
+    def set_range(self,_input):
+        if _input < 1e-3:
+            source_range = 1e-3
+        elif _input < 10e-3:
+            source_range = 10e-3
+        elif _input < 100e-3:
+            source_range = 100e-3
+        else:
+            source_range = 200e-3
+        return source_range 
         
     def set_intervals(self, step = .001, rate = .001, time_at_level = 0):
         slope_time = step/rate
         interval = slope_time + time_at_level
-        self._visainstrument.write(':prog:int {};slope {}'.format(interval,
-                                                                  slope_time))
+        self._visainstrument.write(':prog:int {};slope {}'.format(interval,    
+                                                              slope_time))
+    def create_program(self, filename = 'fluxsweep.csv', 
+                       step = 1e-3, min_current = 1e-3, max_current = 200e-3):
+        csv_string = self.create_csv(stepval = step, minval = min_current,
+                                     maxval = max_current)
+        self._visainstrument.write(':prog:def "{name}","{data}";:prog:load "{name}"'
+                                    .format(name = filename, data=csv_string))
+        
     def test_program_function(self):
-        self.set_intervals()
-        self._visainstrument.write(':outp on;:prog:mem "%s";run' %self.create_csv())
+        self._visainstrument.write(':prog:step')
