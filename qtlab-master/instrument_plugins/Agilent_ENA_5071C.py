@@ -5,6 +5,7 @@ import visa
 import types
 import logging
 import numpy as np
+import time
 
 triggered=[False]*159 
 
@@ -176,28 +177,32 @@ class Agilent_ENA_5071C(Instrument):
         self.get_sweep_type()
         self.get_electrical_delay()
         
-    def wait(self):
+    def wait(self, wait_time):
         '''
         
         '''
-        print("I should be waiting")
-        cont=True
-        while(cont):
-            try:
-                self.get_fdata()
-                cont=False
-            except:
-                cont=True
-        return
+        start = time.time()
+        while (time.time()-start<wait_time):
+            pass
+            
+#        print("I should be waiting")
+#        cont=True
+#        while(cont):
+#            try:
+#                self.get_fdata()
+#                cont=False
+#            except:
+#                cont=True
+#        return
     
-    def average(self, number):
+    def average(self, number, time_to_wait):
         '''
         
         '''
         self.set_avgnum(number)
         self.set_avgstat(0)
         self.set_avgstat(1)
-        #self.wait()
+        self.wait(time_to_wait)
         print("Done")
         return
         
