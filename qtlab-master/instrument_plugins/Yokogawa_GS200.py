@@ -12,7 +12,7 @@ import logging
 import time
 import numpy as np
 
-MIN_CURR = 1E-3
+MIN_CURR = 0
 MAX_CURR = 200E-3
 
 class Yokogawa_GS200(Instrument):
@@ -41,9 +41,9 @@ class Yokogawa_GS200(Instrument):
         self.add_parameter('output_level_auto', type = types.StringType)
         self.add_parameter('output_protection', type = types.StringType)
 
-        self.add_function('test_program_function')
         self.add_function('create_csv')
-        self.add_function('set_intervals')
+        self.add_function('set_ramp_intervals')
+        self.add_function('step_current')
         self.add_function('create_program')
         self.add_function('save_setup')
         self.add_function('load_setup')           
@@ -241,23 +241,28 @@ class Yokogawa_GS200(Instrument):
         '''
         string = ''
         source_type = 'I'
+        iteration = 0
         if stepval>0:
             value = minval
             while value < maxval:
                 string += '{},{},{}\n'.format(value, self.set_range(value), 
                                                 source_type)
                 value += stepval
+                iteration +=1
             string += '{},{},{}\n'.format(maxval, 
                                     self.set_range(maxval), source_type)
+            iteration +=1
         else:
             value = maxval
             while value > minval:
                 string += '{},{},{}\n'.format(value, self.set_range(value), 
                                                 source_type)
                 value += stepval
+                iteration += 1
             string += '{},{},{}\n'.format(minval, 
                                     self.set_range(minval), source_type)
-        return string
+            iteration +=1
+        return [string, iteration]
         
     def set_range(self,_input):
         if _input < 1e-3:
@@ -270,17 +275,18 @@ class Yokogawa_GS200(Instrument):
             source_range = 200e-3
         return source_range 
         
-    def set_intervals(self, step = .001, rate = .001, time_at_level = 0):
+    def set_ramp_intervals(self, step = .001, rate = .001, time_at_level = 0):
         slope_time = step/rate
-        interval = slope_time + time_at_level
-        self._visainstrument.write(':prog:int {};slope {}'.format(interval,    
-                                                              slope_time))
+        self._visainstrument.write(':prog:slope {}'.format(slope_time))
+        return slope_time
     def create_program(self, filename = 'fluxsweep.csv', 
                        step = 1e-3, min_current = 1e-3, max_current = 200e-3):
         csv_string = self.create_csv(stepval = step, minval = min_current,
                                      maxval = max_current)
         self._visainstrument.write(':prog:def "{name}","{data}";:prog:load "{name}"'
-                                    .format(name = filename, data=csv_string))
+                                    .format(name = filename, data=csv_string[0]))
+        return csv_string[1]
         
-    def test_program_function(self):
+        
+    def step_current(self):
         self._visainstrument.write(':prog:step')
