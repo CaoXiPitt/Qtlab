@@ -175,6 +175,7 @@ class Agilent_ENA_5071C(Instrument):
         self.get_math()
         self.get_sweep_type()
         self.get_electrical_delay()
+        
     def wait(self):
         '''
         
@@ -185,18 +186,21 @@ class Agilent_ENA_5071C(Instrument):
             try:
                 self.get_fdata()
                 cont=False
+            except:
+                cont=True
+        return
     
     def average(self, number):
         '''
         
         '''
         self.set_avgnum(number)
+        self.set_avgstat(0)
         self.set_avgstat(1)
-        self.set_avg_trigger(1)
-        print self.wait()
+        #self.wait()
         print("Done")
-
-    
+        return
+        
     def continuous_trigger_toggle(self, ch=1):
         '''
         Creates a continues trigger if one is not already present,
@@ -229,7 +233,7 @@ class Agilent_ENA_5071C(Instrument):
         logging.info(__name__ + ' : trigger')
         self._visainstrument.write(":INIT %s" % ch)
 
-     def do_get_electrical_delay(self):
+    def do_get_electrical_delay(self):
         '''
         Gets the length of the electrical delay in seconds
         
@@ -253,7 +257,7 @@ class Agilent_ENA_5071C(Instrument):
             None
         '''
         logging.info(__name__ + "set the electrical delay length (seconds)")
-        self.__visainstrument.write(":CALC1:CORR:EDEL:TIME")    
+        self._visainstrument.write(":CALC1:CORR:EDEL:TIME "+str(time))    
     
     def do_get_trigger_scope(self):
         '''
