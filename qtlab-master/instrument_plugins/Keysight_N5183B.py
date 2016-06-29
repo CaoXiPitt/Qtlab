@@ -25,13 +25,9 @@ class Keysight_N5183B(Instrument):
         self.add_parameter('frequency', flags = Instrument.FLAG_GETSET,
                            units = ' Hz', type = types.FloatType)
         self.add_parameter('reference_source', type = types.StringType,
-                           flags = Instrument.FLAG_GET)
+                           flags = Instrument.FLAG_GETSET)
         self.add_parameter('alc_auto', flags = Instrument.FLAG_GETSET, 
                            type = types.IntType, options_list = [0,1])
-        self.get_output_status()
-        self.get_frequency()
-        self.get_reference_source()
-        self.get_alc_auto()
         
          # Phase
         self.add_parameter('phase_reference', flags = Instrument.FLAG_SET)
@@ -47,7 +43,18 @@ class Keysight_N5183B(Instrument):
         self.add_parameter('frequency_offset', flags = Instrument.FLAG_GETSET,
                            units = ' Hz', type = types.FloatType,
                            minval = -200e9, maxval = 200e9)
+                           
+                           
+        self.add_function('get_all')
+        self.add_function('reset')
+        self.add_function('send_instruction')
+        self.add_function('retrieve_data')
         
+        if reset:
+            self.reset()
+        else:
+            self.get_all()
+            
     def do_get_output_status(self):
         '''
         Reads the output status
@@ -91,11 +98,13 @@ class Keysight_N5183B(Instrument):
                 The source of the reference siganl
         '''
         return self._visainstrument.ask('ROSC:SOUR?')
+        
     def do_set_reference_source(self, source):
         '''
         Sets the reference source
             Input:
-                source (string) : INT = internal; EXT = external; BBG = internal baseband generator
+                source (string) : INT = internal; EXT = external; 
+                BBG = internal baseband generator
         '''
         logging.info(__name__ + ' : set reference source to %s' % source)
         self._visainstrument.write('ROSC:SOUR %s' % source)
@@ -108,28 +117,13 @@ class Keysight_N5183B(Instrument):
         '''
         logging.info(__name__+ ' get alc auto status')
         return self._visainstrument.ask('POW:ALC:BAND:AUTO?')
-        
-    def do_get_frequency_offset(self):
-        '''
-        Reads the frequency offset
-            Output:
-                frequency (float) : in Hz
-        '''
-        logging.info(__name__ = ' : get frequency offset')
-        return self._visainstrument.ask('FREQ:OFF?')
-    def do_set_frequency_offset(self, frequency):
-        '''
-        Sets the offset frequency
-            Input:
-                frequency (float) : in Hz
-        '''
-        logging.info(__name__ + ' : setting offset frequency to %f Hz' % frequency)
-        self._visainstrument.write('FREQ:OFF %s' % frequency)
+
     def do_set_phase_reference(self):
         '''
         Sets the current output phase as a zero reference.
         '''
-        logging.info(__name__ + ' : setting current phase output as zero reference')
+        logging.info(__name__ + 
+                    ' : setting current phase output as zero reference')
         self._visainstrument.write('PHAS:REF')
     def do_get_phase_adjust(self):
         '''
@@ -146,17 +140,6 @@ class Keysight_N5183B(Instrument):
         '''
         logging.info(__name__ + ' : setting phase adjust %f DEG' %value)
         self._visainstrument.write('PHAS:ADJ %sDEG' %value)
-    def do_set_alc_level(self, value):
-        '''
-        Sets the automatic level control level
-            Input: 
-                value (float) : -20 to 20 dB
-        '''
-        logging.info(__name__ + ' : set alc power level %sDB' % value)
-        self._visainstrument.write('POW:ALC:LEV %sDB' % value)
-
-
-
         
     def do_set_alc_bandwidth(self, width):
         '''
@@ -175,4 +158,73 @@ class Keysight_N5183B(Instrument):
         logging.info(__name__+ ' : get alc bandwidth')
         return float(self._visainstrument.ask('POW:ALC:BAND?'))
         
-    
+    def do_get_alc_level(self):
+        '''
+        Reads the automatic level control level
+            Output:
+                value (float) : the level of the alv
+        '''
+        logging.info(__name__ + ' : Reading the alc level')
+        return self._visainstrument.ask('POW:ALC:LEV?')        
+    def do_set_alc_level(self, value):
+        '''
+        Sets the automatic level control level
+            Input: 
+                value (float) : -20 to 20 dB
+        '''
+        logging.info(__name__ + ' : set alc power level %sDB' % value)
+        self._visainstrument.write('POW:ALC:LEV %sDB' % value)
+        
+    def do_get_frequency_offset(self):
+        '''
+        Reads the frequency offset
+            Output:
+                frequency (float) : in Hz
+        '''
+        logging.info(__name__ = ' : get frequency offset')
+        return self._visainstrument.ask('FREQ:OFF?')
+    def do_set_frequency_offset(self, frequency):
+        '''
+        Sets the offset frequency
+            Input:
+                frequency (float) : in Hz
+        '''
+        logging.info(__name__ + 
+                    ' : setting offset frequency to %f Hz' % frequency)
+        self._visainstrument.write('FREQ:OFF %s' % frequency)
+        
+    def send_command(self, command):
+        '''
+        Sends a command to the instrument
+            Input:
+                command (string) : command to be sent (see manual for commands)
+        '''
+        self._visainstrument.write(command)
+    def retreive_data(self, query):
+        '''
+        Reads data from the instrument
+            Input:
+                query (string) : command to be sent (see manual for commands)
+            Output:
+                varies depending on command sent
+        '''
+        return self._visainstrument.ask(query)
+    def reset(self):
+        '''
+        Reset to default state
+        '''
+        self._visainstrument.write('*RST')
+    def get_all(self):
+        '''
+        Reads data for all parameters
+            Output:
+                None
+        '''
+        self.get_output_status()
+        self.get_frequency()
+        self.get_reference_source()
+        self.get_alc_auto()
+        self.get_phase_adjust()
+        self.get_alc_bandwidth()
+        self.get_alc_level()
+        self.get_frequency_offset()
