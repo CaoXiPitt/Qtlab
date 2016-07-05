@@ -1,10 +1,13 @@
 # MJH 2015_10_15.. Maybe this will work??
-#
+#Additions by Alex
 from instrument import Instrument
 import visa
 import types
 import logging
 import numpy as np
+import time
+
+triggered=[False]*159 
 
 class Agilent_ENA_5071C(Instrument):
     '''
@@ -12,9 +15,10 @@ class Agilent_ENA_5071C(Instrument):
 
     Usage:
     Initialize with
-    <name> = instruments.create('<name>', 'Agilent_E5071C', address='<GBIP address>, reset=<bool>')
+    <name> = instruments.create('<name>', 'Agilent_E5071C', 
+    address='<GBIP address>, reset=<bool>')
     '''
-
+    
     def __init__(self, name, address, reset=False):
         '''
         Initializes the Agilent_E5071C, and communicates with the wrapper.
@@ -31,24 +35,91 @@ class Agilent_ENA_5071C(Instrument):
         self._address = address
         self._visainstrument = visa.instrument(self._address)
 
-        self.add_parameter('power',
-            flags=Instrument.FLAG_GETSET, units='dBm', minval=-80, maxval=10, type=types.FloatType)
-        self.add_parameter('rfout',flags=Instrument.FLAG_GETSET, minval=0, maxval=1, type=types.IntType)
-        self.add_parameter('nfpts', flags=Instrument.FLAG_GETSET,minval=2, maxval=1601, type=types.IntType)
-        self.add_parameter('sparam', flags=Instrument.FLAG_GETSET, type=types.StringType)
-        self.add_parameter('fstart', flags=Instrument.FLAG_GETSET, units='Hz', minval=300E3, maxval=20E9, type=types.FloatType)
-        self.add_parameter('fstop', flags=Instrument.FLAG_GETSET, units='Hz', minval=300E3, maxval=20E9, type=types.FloatType)
-        self.add_parameter('ifbw', flags=Instrument.FLAG_GETSET, units='Hz', minval=10, maxval=1500000, type=types.FloatType)
-        self.add_parameter('avgstat', flags=Instrument.FLAG_GETSET, minval=0, maxval=1, type=types.IntType)
-        self.add_parameter('avgnum', flags=Instrument.FLAG_GETSET, minval=1, maxval=999, type=types.IntType)
-        self.add_parameter('trform',flags=Instrument.FLAG_GETSET, type=types.StringType)        
+        self.add_parameter('power',flags=Instrument.FLAG_GETSET, units='dBm',
+                           minval=-80, maxval=10, type=types.FloatType)
+        
+        self.add_parameter('rfout',flags=Instrument.FLAG_GETSET, minval=0,
+                           maxval=1, type=types.IntType)
+        
+        self.add_parameter('nfpts', flags=Instrument.FLAG_GETSET,minval=2,
+                           maxval=1601, type=types.IntType)
+        
+        self.add_parameter('sparam',flags=Instrument.FLAG_GETSET,
+                           type=types.StringType)
+        
+        self.add_parameter('fstart', flags=Instrument.FLAG_GETSET, units='Hz',
+                           minval=300E3, maxval=20E9, type=types.FloatType)
+        
+        self.add_parameter('fstop', flags=Instrument.FLAG_GETSET, units='Hz',
+                           minval=300E3, maxval=20E9, type=types.FloatType)
+        
+        self.add_parameter('ifbw', flags=Instrument.FLAG_GETSET, units='Hz',
+                           minval=10, maxval=1500000, type=types.FloatType)
+        
+        self.add_parameter('avgstat', flags=Instrument.FLAG_GETSET, minval=0,
+                           maxval=1, type=types.IntType)
+        
+        self.add_parameter('avgnum', flags=Instrument.FLAG_GETSET, minval=1,
+                           maxval=999, type=types.IntType)
+        
+        self.add_parameter('trform',flags=Instrument.FLAG_GETSET,
+                           type=types.StringType)       
+        
+        self.add_parameter('continuous_trigger',flags=Instrument.FLAG_GETSET,
+                           type=types.BooleanType)
+
+        self.add_parameter('trigger_scope',flags=Instrument.FLAG_GETSET, 
+                           type=types.StringType)
+
+        self.add_parameter('trigger_source',flags=Instrument.FLAG_GETSET, 
+                           type=types.StringType)    
+
+        self.add_parameter('point_trigger',flags=Instrument.FLAG_GETSET, 
+                           type=types.BooleanType)
+
+        self.add_parameter('avg_trigger',flags=Instrument.FLAG_GETSET, 
+                           type=types.BooleanType)
+
+        self.add_parameter('time_sweep', flags=Instrument.FLAG_GETSET,
+                           type=types.FloatType)
+
+        self.add_parameter('auto_sweep', flags=Instrument.FLAG_GETSET,
+                           type=types.StringType)
+        
+        self.add_parameter('smoothing', flags=Instrument.FLAG_GETSET,
+                           type=types.IntType, minVal=0, maxVal=1)
+        
+        self.add_parameter('correction', flags=Instrument.FLAG_GETSET,
+                           type=types.IntType, minVal=0, maxVal=1)                   
+        
+        self.add_parameter('fcenter', flags=Instrument.FLAG_GETSET,
+                           type=types.FloatType, units='Hz')
+        
+        self.add_parameter('fspan', flags=Instrument.FLAG_GETSET,
+                           type=types.FloatType, units='Hz')        
+        
+        self.add_parameter('cwfreq', flags=Instrument.FLAG_GETSET,
+                           type=types.FloatType, units='Hz')        
+        
+        self.add_parameter('math', flags=Instrument.FLAG_GETSET,
+                           type=types.StringType)        
+        
+        self.add_parameter('sweep_type', flags=Instrument.FLAG_GETSET,
+                           type=types.StringType)
+        
+        self.add_parameter('electrical_delay', flags=Instrument.FLAG_GETSET,
+                           type=types.FloatType)
         
         self.add_function('reset')
-        self.add_function ('get_all')
+        self.add_function('get_all')
         self.add_function('getfdata')
         self.add_function('gettrace')
+        self.add_function('trigger')
+        self.add_function('continuous_trigger_toggle')
+        self.add_function('average')
+        self.add_function('wait')
+        self.add_function('data_to_mem')
         
-
         if (reset):
             self.reset()
         else:
@@ -86,11 +157,390 @@ class Agilent_ENA_5071C(Instrument):
         self.get_sparam()
         self.get_fstart()
         self.get_fstop()
+        self.get_fcenter()
+        self.get_fspan()
         self.get_ifbw()
         self.get_avgstat()
         self.get_avgnum()
         self.get_trform()
+        self.get_trigger_scope()
+        self.get_trigger_source()
+        self.get_correction()
+        self.get_smoothing()
+        self.get_cwfreq()
+        self.get_auto_sweep()
+        self.get_time_sweep()
+        self.get_point_trigger()
+        self.get_avg_trigger()
+        self.get_continuous_trigger()
+        self.get_math()
+        self.get_sweep_type()
+        self.get_electrical_delay()
         
+    def wait(self, wait_time):
+        '''
+        
+        '''
+        start = time.time()
+        while (time.time()-start<wait_time):
+            pass
+            
+#        print("I should be waiting")
+#        cont=True
+#        while(cont):
+#            try:
+#                self.get_fdata()
+#                cont=False
+#            except:
+#                cont=True
+#        return
+    
+    def average(self, number, time_to_wait):
+        '''
+        
+        '''
+        self.set_avgnum(number)
+        self.set_avgstat(0)
+        self.set_avgstat(1)
+        self.wait(time_to_wait)
+        print("Done")
+        return
+        
+    def continuous_trigger_toggle(self, ch=1):
+        '''
+        Creates a continues trigger if one is not already present,
+        if a continuous trigger is already in place, this function
+        ends it.
+        
+        Input:
+            ch: The number corresponding to the Channel, defaults to 1
+        '''
+        global triggered
+        triggered[ch-1]=(not triggered[ch-1])
+        logging.info(__name__+"triggered: "+str(triggered[ch-1]))
+        self._visainstrument.write(":INIT{}:CONT {}".format(ch,
+                                   int(triggered[ch-1])))
+        return triggered[ch-1]
+        
+    def trigger(self,ch=1):
+        '''
+        Creates a single trigger and returns to the normal state unless\
+        already in a continuous trigger.
+        
+        Input:
+            ch: The number corresponding to the Channel, defaults to 1
+        
+        Output:
+            None
+        '''
+        if triggered[ch-1]:
+            return
+        logging.info(__name__ + ' : trigger')
+        self._visainstrument.write(":INIT %s" % ch)
+
+    def do_get_electrical_delay(self):
+        '''
+        Gets the length of the electrical delay in seconds
+        
+        Input:
+            None
+        
+        Output:
+            None
+        '''
+        logging.info(__name__ + "get the electrical delay length (seconds)")
+        return self._visainstrument.ask(":CALC1:CORR:EDEL:TIME?")
+        
+    def do_set_electrical_delay(self, time):
+        '''
+        Sets the length of the electrical delay in seconds
+        
+        Input:
+            time= Amount of time to simulate as a delay in seconds
+            
+        Output:
+            None
+        '''
+        logging.info(__name__ + "set the electrical delay length (seconds)")
+        self._visainstrument.write(":CALC1:CORR:EDEL:TIME "+str(time))    
+    
+    def do_get_trigger_scope(self):
+        '''
+        Returns the scope of the trigger
+        
+        Input:
+            None
+             
+        Output:
+            A string representation of the source.  Either "ALL" or "ACT"
+            
+        '''
+        logging.debug(__name__+' : get trigger scope')
+        return self._visainstrument.ask(":TRIG:SEQ:SCOP?")
+    
+    def do_set_trigger_scope(self, scope):
+        '''
+        Sets the scope trigger
+        
+        Input:
+            scope: Either "ALL" or "ACT", which defines the scope
+            of the trigger"
+        '''
+        assert scope.upper() in ['ACT','ALL']
+        logging.debug(__name__+' : set the trigger scope to: '+scope)
+        self._visainstrument.write(":TRIG:SEQ:SCOP "+scope.upper())
+    
+    def do_get_trigger_source(self):
+        '''
+        Gets the trigger source
+        
+        Input:
+            None
+            
+        Output:
+            trigger_source: It will be INT EXT MAN or BUS which represents\
+            the trigger source
+            
+        '''
+        logging.debug(__name__+" : get trigger source")
+        return self._visainstrument.ask("TRIG:SOUR?")
+        
+    def do_set_trigger_source(self, source):
+        '''
+        Sets the trigger source
+        
+        Input:
+            trigger_source: It will be INT EXT MAN or BUS which represents\
+            the trigger source
+            
+        Output:
+            None
+            
+        '''
+        assert source.upper() in ['INT','EXT','MAN','BUS']
+        logging.debug(__name__+" : set trigger source to "+source)
+        self._visainstrument.write("TRIG:SOUR "+source.upper())
+    
+    def do_get_correction(self):
+        '''
+        Gets the state of correction
+        
+        Input:
+            None
+        
+        Output:
+            The state of the correction
+        '''
+        logging.debug(__name__+" : get state of correction")
+        return self._visainstrument.ask(":SENS1:CORR:STAT?")
+    
+    def do_set_correction(self, correction):
+        '''
+        Sets the state of correction
+        
+        Input:
+            The state of the correction
+            
+        Output:
+            None
+        '''
+        logging.debug(__name__+": set state of correction to "+str(correction))
+        self._visainstrument.write(":SENS1:CORR:STAT "+str(correction))
+    
+    def do_get_smoothing(self):
+        '''
+        Gets the state of the smoothing
+        
+        Input:
+            None
+            
+        Output:
+            smoothing=the state of the smoothing operation
+        '''
+        logging.debug(__name__+": get the state of smoothing")
+        return self._visainstrument.ask(":CALC1:SMO:STAT?")
+        
+    def do_set_smoothing(self, smoothing):
+        '''
+        Sets the state of the smoothing
+        
+        Input:
+            smoothing=the state of the smoothing operation
+            
+        Output:
+            None
+        '''
+        logging.debug(__name__+": set the smoothing "+ str(smoothing))
+        self._visainstrument.write(":CALC1:SMO:STAT "+str(smoothing))        
+        
+    def do_get_power(self):
+        '''
+        Gets the current power (Amplitude) of the sweep
+        
+        Input:
+            None
+            
+        Output:
+            power=The power (Amplitude) of the sweep
+        '''
+        logging.debug(__name__+ ": get the power")
+        return self._visainstrument.ask(":SOUR1:POW?")
+    
+    def do_set_power(self, power):
+        '''
+        Sets the current power (Amplitude) of the sweep
+        
+        Input:
+            power=The power desired for the sweep (.05 dBm resolution)
+       
+       Output:
+            None
+        '''
+        if(int(power)>5):
+            power=5
+        assert power<=5
+        logging.debug(__name__+ ": set the power")
+        self._visainstrument.write(":SOUR1:POW "+str(power))
+    
+    def do_get_cwfreq(self):
+        '''
+        Get the cw frequency
+        
+        Input:
+            None
+            
+        Output:
+            cw frequency (Hz)
+        '''
+    
+        logging.debug(": Get the cw frequency")
+        return self._visainstrument.ask(":SENS1:FREQ?")
+        
+    def do_set_cwfreq(self, cw):
+        '''
+        Set the cw frequency
+        
+        Input:
+            CW frequency (Hz)
+            
+        Output:
+            None
+        '''
+        logging.debug(": Set the cw frequency to "+str(cw))   
+        self._visainstrument.write(":SENS1:FREQ "+str(cw))
+        
+    def do_get_auto_sweep(self):
+        '''
+        Gets whether or not auto sweep is set
+        
+        Input:
+            None
+            
+        Output:
+            auto=(1/0) representation of whether the auto sweep is on
+            
+        '''
+        
+        logging.debug(__name__+": get if auto sweep")
+        return self._visainstrument.ask(":SENS1:SWE:TIME:AUTO?")
+    
+    def do_set_auto_sweep(self, on_off):
+        '''
+        Sets the auto sweep
+        
+        Input:
+            on_off: (1/0) representation of boolean
+        
+        Output:
+            None
+        '''
+        
+        logging.debug(__name__ + ": set auto swep to "+str(on_off))
+        self._visainstrument.write(":SENS1:SWE:TIME:AUTO "+str(on_off))
+    
+    def do_get_time_sweep(self):
+        '''
+        Gets the timing of the the sweep
+        
+        Input:
+            None
+            
+        Output:
+            time=the timing of the trigger (0 represents autotrigger)
+        '''
+        
+        logging.debug(__name__+ ": get the time of the sweep")
+        return self._visainstrument.ask(":SENS1:SWE:TIME?")
+    
+    def do_set_time_sweep(self, time):
+        '''
+        Sets the timing of the sweep
+        
+        Input:
+            time=The time of the trigger (set 0 for auto trigger)
+            
+        Output:
+            None
+        '''
+        if(self.get_auto_sweep()):
+            self.set_auto_sweep(0)
+        logging.debug(__name__ + ": set the time of the sweep to "+str(time))
+        self._visainstrument.write(":SENS1:SWE:TIME "+ str(time))
+    
+    def do_get_point_trigger(self):
+        '''
+        Gets the state of the point trigger (ON/OFF)
+        
+        Input:
+            None
+            
+        Output:
+            point_trigger: 1 if on, 0 if off
+        '''
+        
+        logging.debug(__name__+" : get trigger source")
+        return self._visainstrument.ask("TRIG:POIN?")        
+   
+    def do_set_point_trigger(self, trigger):
+        '''
+        Sets the state of the point trigger (ON/OFF)
+        
+        Input:
+            trigger: 1 if on, 0 if off
+            
+        Output:
+            None
+            
+        '''
+        logging.debug(__name__+" : set the state of the point trigger")
+        self._visainstrument.write(":TRIG:POIN "+str(int(trigger)))
+    def do_get_avg_trigger(self):
+        '''
+        Gets the state of the averaging trigger
+        
+        Input:
+            None
+        
+        Output:
+            state: The state of the average trigger.
+        
+        '''
+        logging.debug(__name__+" : get the state of the averaging trigger")
+        return self._visainstrument.ask(":TRIG:AVER?")
+    
+    def do_set_avg_trigger(self, state):
+        '''
+        Gets the state of the averaging trigger
+        
+        Input:
+            None
+        
+        Output:
+            state: The state of the average trigger.
+        '''
+        logging.debug(__name__+" : set the state of the averaging trigger")
+        self._visainstrument.write(":TRIG:AVER "+str(int(state)))
+    
     def getfdata(self):
         '''
         Gets freq stimulus data, returns array
@@ -119,32 +569,37 @@ class Agilent_ENA_5071C(Instrument):
         data=data.reshape((len(data)/2,2))
         return data.transpose() # mags, phase
         
+    def do_get_continuous_trigger(self, ch=1):
+        '''
+        Reads the state of trigger on a channel
         
-    def do_get_power(self):
-        '''
-        Reads the power of the signal from the instrument
-
         Input:
-            None
-
+            ch: defaults to 1, represents the channel to be triggered
+            
         Output:
-            Power of Source 1 (dBM)
+            The state of the channel's trigger
         '''
-        logging.debug(__name__ + ' : get power')
-        return float(self._visainstrument.ask(':SOUR1:POW?'))
+        global triggered
+        logging.debug(__name__+' : get state of continuous trigger in '+
+            'channel %s' % ch)
+        return triggered[ch-1]
 
-    def do_set_power(self, amp):
+    def do_set_continuous_trigger(self, state,ch=1):
         '''
-        Set the power of the signal
-
+        Sets the state of the trigger on a channel
+        
         Input:
-            amp (float) : power in ?? (dBm)
-
-        Output:
-            None
+            state: state desired
+            ch: defaults to 1, the numeric representation of the channel
         '''
-        logging.debug(__name__ + ' : set power to %f' % amp)
-        self._visainstrument.write(':SOUR1:POW %s' % amp)
+        global triggered
+        logging.debug(__name__+' : set the state of channel {} to {}'.format(
+                     ch, state))
+        self._visainstrument.write(':INIT{}:CONT {}'.format(int(ch),
+                                   int(state)))
+        triggered[ch-1]=bool(state)
+        return triggered[ch-1]
+       
     
     def do_get_rfout(self):
         '''
@@ -273,6 +728,60 @@ class Agilent_ENA_5071C(Instrument):
         '''
         logging.debug(__name__ + ': set fstop to %s' % fstop)
         self._visainstrument.write(':SENS1:FREQ:STOP %s' % fstop)
+    
+    def do_get_fcenter(self):
+        '''
+        Get the frequency center
+        
+        Input:
+            None
+            
+        Output:
+            center freq (Hz)
+        '''
+        logging.debug(__name__+": get fcenter")
+        return self._visainstrument.ask(":SENS1:FREQ:CENT?")
+    
+    def do_set_fcenter(self, center):
+        '''
+        Set the frequency center
+        
+        Input:
+            center=center frequency
+        
+        Output:
+            None
+        '''
+        logging.debug(__name__+": set fcenter")
+        self._visainstrument.write(":SENS1:FREQ:CENT "+str(center))
+    
+    def do_get_fspan(self):
+        '''
+        Get the frequency span
+        
+        Input:
+            None
+            
+        Output:
+            span freq (Hz)
+        '''
+        logging.debug(__name__+": get fspan")
+        return self._visainstrument.ask(":SENS1:FREQ:SPAN?")
+    
+    def do_set_fspan(self, span):
+        '''
+        Set the frequency span
+        
+        Input:
+            span=span frequency
+        
+        Output:
+            None
+        '''
+        logging.debug(__name__+": set fcenter")
+        self._visainstrument.write(":SENS1:FREQ:SPAN "+str(span))
+    
+    
     def do_get_ifbw(self):
         '''
         Get ifbw 
@@ -350,7 +859,9 @@ class Agilent_ENA_5071C(Instrument):
         self._visainstrument.write(':SENS1:AVER:COUN %s' % avgnum)
     def do_get_trform(self):
         '''
-        Get trace format
+        Get trace format.  MLOGarithmic|PHASe|GDELay| SLINear|
+        SLOGarithmic|SCOMplex|SMITh|SADMittance|PLINear|PLOGarithmic|
+        POLar|MLINear|SWR|REAL| IMAGinary|UPHase|PPHase
         
         Input: 
             None
@@ -363,7 +874,9 @@ class Agilent_ENA_5071C(Instrument):
     
     def do_set_trform(self, f):
         '''
-        Set trace format
+        Set trace format. MLOGarithmic|PHASe|GDELay| SLINear|
+        SLOGarithmic|SCOMplex|SMITh|SADMittance|PLINear|PLOGarithmic|
+        POLar|MLINear|SWR|REAL| IMAGinary|UPHase|PPHase
         
         Input: 
             new format (string)
@@ -374,9 +887,58 @@ class Agilent_ENA_5071C(Instrument):
         logging.debug(__name__ + ': set trace  format to %s' % f)
         self._visainstrument.write(':CALC1:FORM %s' % f)    
         
+    def data_to_mem(self):        
+        '''
+        Calls for data to be stored in memory
+        '''
+        logging.debug(__name__+": data to mem called")
+        self._visainstrument.write(":CALC1:MATH:MEM")
+    
+    def do_get_math(self):
+        '''
+        Gets the state of the math
+            'ADD'=Addition
+            'SUBT'=Subtraction
+            'DIV'=Division
+            'MULT'=Multiplication
+            'NORM'=Normal/None
+        '''
+        logging.debug(__name__+": math")
+        return self._visainstrument.ask(":CALC1:MATH:FUNC?")
         
+    def do_set_math(self, math):
+        '''
+        Sets the state of the math
+            'ADD'=Addition
+            'SUBT'=Subtraction
+            'DIV'=Division
+            'MULT'=Multiplication
+            'NORM'=Normal/None
+        '''
+        logging.debug(__name__+": sets the state of math_mem")
+        self._visainstrument.write(":CALC1:MATH:FUNC "+ math.upper())
+    
+    def do_get_sweep_type(self):
+        '''
+        Gets the type of sweep
+            'LIN'=Linear
+            'LOG'=Logarithmic
+            'SEGM'=Segment
+            'POW'=Power
+        '''
+        logging.debug(__name__+": gets the sweep type")
+        return self._visainstrument.ask(":SENS1:SWE:TYPE?")
         
-        
+    def do_set_sweep_type(self, sweep):
+        '''
+        Gets the type of sweep
+            'LIN'=Linear
+            'LOG'=Logarithmic
+            'SEGM'=Segment
+            'POW'=Power
+        '''
+        logging.debug(__name__+": Set the sweep type to "+sweep)
+        self._visainstrument.write(":SENS1:SWE:TYPE "+sweep.upper())
     # shortcuts
     def off(self):
         '''

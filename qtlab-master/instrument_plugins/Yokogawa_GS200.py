@@ -12,12 +12,13 @@ import logging
 import time
 import numpy as np
 
-MIN_CURR = 1E-3
-MAX_CURR = 200E-3
-
+MIN_CURR = -1E-3
+MAX_CURR = 1E-3
+RATE = 0.1e-3
 class Yokogawa_GS200(Instrument):
                           
-    def __init__(self, name, address, source_type = 'current', reset = False):
+    def __init__(self, name, address, source_type = 'current', rate = RATE,
+                minimum = MIN_CURR, maximum = MAX_CURR, reset = False):
         """
         Initializes the Yokogawa GS200
             Input:
@@ -28,6 +29,9 @@ class Yokogawa_GS200(Instrument):
         logging.info(__name__ + ' : Initializing instrument Yokogawa GS200')
         Instrument.__init__(self, name, tags=['physical'])
         self._address = address
+        self._rate = rate
+        self._minimum = minimum
+        self._maximum = maximum
         self._visainstrument = visa.instrument(self._address)
         self._visainstrument.term_chars = '\r'
         
@@ -41,10 +45,13 @@ class Yokogawa_GS200(Instrument):
         self.add_parameter('output_level_auto', type = types.StringType)
         self.add_parameter('output_protection', type = types.StringType)
 
-        self.add_function('test_program_function')
         self.add_function('create_csv')
-        self.add_function('set_intervals')
+        self.add_function('set_ramp_intervals')
+        self.add_function('step_current')
         self.add_function('create_program')
+        self.add_function('change_current')
+        self.add_function('get_slope_interval')
+        self.add_function('set_slope_interval')
         self.add_function('save_setup')
         self.add_function('load_setup')           
         self.add_function('send_instruction')
@@ -110,7 +117,7 @@ class Yokogawa_GS200(Instrument):
         '''
         possible_strings = ['max', 'min', 'up', 'down']
         _range = self._check_input_validity(_range, possible_strings, 
-                                  MIN_CURR, MAX_CURR)
+                                  self._minimum, self._maximum)
         self._log('Setting the output range to %s' %_range)
         self._visainstrument.write(':sour:rang %s')
     
@@ -132,6 +139,27 @@ class Yokogawa_GS200(Instrument):
         level = self._check_input_validity(level, possible_strings)
         self._log('Setting the source level to %s' %level)
         self._visainstrument.write(':sour:lev %s' %level)
+    def do_get_output_level_auto(self):
+        '''
+        Reads the source level in terms of the most appropriate range.
+            Output:
+                range (float) : in Amperes
+        '''
+        self._log('Reading the source level auto range')
+        return self._visainstrument.ask(':sour:lev:auto?')
+        
+    def do_set_output_level_auto(self, level):
+        '''
+        Sets the source level range to the smallest value which includes the 
+        specified level
+            Input:
+                level (float) : in Amperes
+        '''
+        possible_strings = ['max', 'min']
+        level = self._check_input_validity(level, possible_strings, self._minimum,
+                                           self._maximum)
+        self._log('Setting the output level auto range to %s' %level)
+        self._visainstrument.write(':sour:lev:auto %s' %level)
         
     def do_get_output_protection(self):
         '''
@@ -147,7 +175,8 @@ class Yokogawa_GS200(Instrument):
             Input:
                 limit (string) : max | min | <level>
         '''
-        self._check_input_validity(limit, ['min','max'], MIN_CURR, MAX_CURR)
+        self._check_input_validity(limit, ['min','max'], self._minimum, 
+                                   self._maximum)
         self._log('Setting the current limit to %s' % limit)
         self._visainstrument.write(':sour:prot:curr %s' % limit)
 ##  Functions  ###############################################################
@@ -200,17 +229,35 @@ class Yokogawa_GS200(Instrument):
     def get_all(self):
         #self.get_output()
         #self.get_output_function()
-        #time.sleep(1)
+        time.sleep(1)
         #self.output_range()
-        self.output_level()
+        #self.output_level()
         #self.output_level_auto()
-        self.output_protection()
+        #self.output_protection()
 
 ##  Helpers  #################################################################
     def _log(self, string):
+        '''
+        Displays the string in the log as info
+            Input:
+                string (str) : message to be added to log
+        '''
         logging.info(__name__ + ' : ' + string)
         
     def _check_input_validity(testval, strings, minval = None, maxval = None):
+        '''
+        Tests whether the testval is a valid input. It will convert the 
+        testval to a float then test against minval and maxval. If testval is 
+        too low or high, it will return minval or maxval respectively. If 
+        testval cannot be converted to a float, it will be tested against 
+        strings.
+            Input:
+                testval (float|string) : value to be tested
+                strings (iterable) : values to be compared against if testval
+                is not numerical
+                minval (float) : lower bound for a numerical testval
+                maxval (float) : upper bound for a numerical testval
+        '''
         try:
             testval = float(testval)
             if (minval is not None) and testval < minval:
@@ -229,58 +276,161 @@ class Yokogawa_GS200(Instrument):
     def create_csv(self, stepval = 1e-3, minval=.001, maxval=.2):
         '''
         creates a list of currents formatted to be transferred to the Yokogawa 
-        unit
+        unit 
             Input:
                 step (float) : the interval between current levels (note:
                 negative values will count down from maxval to minval)
                 minval (float) : the minimum value for the current to start at
                 maxval (float) : the maximum value for the current to reach
             Output:
-                csv_values (string) : 
-                of the form '<level>, <range>, <output type>' 
+                csv_values (list) : 
+                [(string)of the form "<level>,<range>,<source type>\n..." ,
+                (int) the number of lines in the string]  
         '''
         string = ''
         source_type = 'I'
+        iteration = 0
+        currents = []
         if stepval>0:
             value = minval
             while value < maxval:
                 string += '{},{},{}\n'.format(value, self.set_range(value), 
                                                 source_type)
+                currents.append(value)
                 value += stepval
+                iteration +=1
             string += '{},{},{}\n'.format(maxval, 
                                     self.set_range(maxval), source_type)
+            currents.append(value)
+            iteration +=1
         else:
             value = maxval
             while value > minval:
                 string += '{},{},{}\n'.format(value, self.set_range(value), 
                                                 source_type)
+                currents.append(value)                                
                 value += stepval
+                iteration += 1
             string += '{},{},{}\n'.format(minval, 
                                     self.set_range(minval), source_type)
-        return string
+            currents.append(value)
+            iteration +=1
+        return [string, iteration]
         
     def set_range(self,_input):
-        if _input < 1e-3:
-            source_range = 1e-3
-        elif _input < 10e-3:
+        '''
+        Gets an appropriate range for the current level 
+            Input:
+                _input (float) : the current level in Amperes
+            Output:
+                range (float) : the smallest range containing the input
+        '''
+        if abs(_input) < 1e-3:
             source_range = 10e-3
-        elif _input < 100e-3:
+        elif abs(_input) < 10e-3:
+            source_range = 10e-3
+        elif abs(_input) < 100e-3:
             source_range = 100e-3
         else:
             source_range = 200e-3
         return source_range 
         
-    def set_intervals(self, step = .001, rate = .001, time_at_level = 0):
-        slope_time = step/rate
-        interval = slope_time + time_at_level
-        self._visainstrument.write(':prog:int {};slope {}'.format(interval,    
-                                                              slope_time))
+    def set_ramp_intervals(self, step = .001, rate = RATE):
+        '''
+        Sets the time it takes to ramp from one step to the next
+            Input:
+                step (float) : the difference between current levels in Ampere
+                rate (float) : the rate of current change in Ampere/second
+        '''
+        slope_time = abs(step/rate)
+        self._visainstrument.write(':prog:slope {}'.format(slope_time))
+        return slope_time
     def create_program(self, filename = 'fluxsweep.csv', 
-                       step = 1e-3, min_current = 1e-3, max_current = 200e-3):
+                       step = 1e-3, min_current = MIN_CURR, max_current = MAX_CURR):
+        '''
+        Creates and loads a program in the Yokogawa unit to sweep current
+            Input:
+                filename (string) : name file will be saved as
+                step (float) : the difference between each output level
+                min_current (float) : the lowest current used
+                max_current (float) : the highest current used
+            Output:
+                steps (int) : the total number of steps in the program
+        '''
         csv_string = self.create_csv(stepval = step, minval = min_current,
                                      maxval = max_current)
         self._visainstrument.write(':prog:def "{name}","{data}";:prog:load "{name}"'
-                                    .format(name = filename, data=csv_string))
+                                    .format(name = filename, data=csv_string[0]))
+        return csv_string[1]
         
-    def test_program_function(self):
+    def get_slope_interval(self):
+        return self._visainstrument.ask(':prog:slope?')
+        
+    def set_slope_interval(self, rate):
+        self._visainstrument.write('prog:slope %s' % rate)
+##
+#   This is the method I added on Friday  #here_olivia
+##        
+    def change_current(self, new_current, rate = None, min_current = MIN_CURR,
+                       max_current = MAX_CURR):
+        '''
+        Changes the current to a new value using a stready ramp to get from the
+        old value to the new value.
+            Input:
+                new_current (float) : the value the current will be set to 
+                (in A)
+                rate (float) : the rate of change of the current (in A/sec)
+                min_current (float) : set a minimum value the current can be 
+                set to (note: this does not change the limit for subsequent 
+                calls)
+                max_current (float) : set a maximum value the current can be 
+                set to (note: this does not change the limit for subsequent 
+                calls)
+        '''
+        org_current = float(self._visainstrument.ask('sour:lev?'))
+
+        step_size = new_current - org_current
+        
+        if rate is None:
+            rate = self._rate
+        else:
+            self._rate=rate
+        #interval = abs(step_size / rate)
+        if min_current < self._minimum:
+            logging.warning('Requested lower limit too low. Limit set to %f A'
+                            %self._minimum)
+            min_current = self._minimum
+        if min_current > self._maximum:
+            logging.warning('Requested lower limit too high.')
+            return False
+        if max_current > self._maximum:
+            logging.warning('Requested upper limit too high. Limit set to %f A'
+                            %self._maximum)
+            max_current = self._maximum
+        if max_current < self._minimum:
+            logging.warning('Requested upper limit too low.')
+            return False
+        if new_current > max_current:
+            logging.warning('Current value too high. Set to %f' %max_current)
+            new_current = max_current
+        if new_current < min_current:
+            logging.warning('Current value too low. Set to %f' %min_current)
+            new_current = min_current
+        if step_size == 0:
+            logging.warning('Trying to set to same current')
+            return False
+        self._visainstrument.write(':prog:def "{name}","{data}";:prog:load "{name}"'
+                                    .format(name = 'change_current.csv', 
+                                            data = '{},{},I'.format(new_current,
+                                                                    self.set_range(new_current))))
+        interval = self.set_ramp_intervals(step_size, rate)
+        if interval < .1:
+            interval = .1
+        self._visainstrument.write(':prog:int %s;:prog:rep 0;:prog:step' %interval)
+        return float(interval)
+
+    def step_current(self):
+        '''
+        Advances the Yokogawa program by one step
+        '''
         self._visainstrument.write(':prog:step')
