@@ -44,7 +44,8 @@ class Keysight_N5183B(Instrument):
                            units = ' Hz', type = types.FloatType,
                            minval = -200e9, maxval = 200e9)
                            
-                           
+        self.add_function('set_power')
+        self.add_function('get_power')                   
         self.add_function('get_all')
         self.add_function('reset')
         self.add_function('send_instruction')
@@ -117,7 +118,14 @@ class Keysight_N5183B(Instrument):
         '''
         logging.info(__name__+ ' get alc auto status')
         return self._visainstrument.ask('POW:ALC:BAND:AUTO?')
-
+    def do_set_alc_auto(self, enable):
+        '''
+        Sets the ALC auto status
+            Input:
+                enable (int) : ON=1, OFF=0
+        '''
+        logging.info(__name__+ ' setting alc auto status to %s' %enable)
+        self._visainstrument.write('POW:ALC:BAND:AUTO %s' %enable)
     def do_set_phase_reference(self):
         '''
         Sets the current output phase as a zero reference.
@@ -181,8 +189,8 @@ class Keysight_N5183B(Instrument):
             Output:
                 frequency (float) : in Hz
         '''
-        logging.info(__name__ = ' : get frequency offset')
-        return self._visainstrument.ask('FREQ:OFF?')
+        logging.info(__name__ + ' : get frequency offset')
+        return self._visainstrument.ask('FREQ:OFFS?')
     def do_set_frequency_offset(self, frequency):
         '''
         Sets the offset frequency
@@ -191,16 +199,16 @@ class Keysight_N5183B(Instrument):
         '''
         logging.info(__name__ + 
                     ' : setting offset frequency to %f Hz' % frequency)
-        self._visainstrument.write('FREQ:OFF %s' % frequency)
+        self._visainstrument.write('FREQ:OFFS %s' % frequency)
         
-    def send_command(self, command):
+    def send_instruction(self, instruction):
         '''
         Sends a command to the instrument
             Input:
                 command (string) : command to be sent (see manual for commands)
         '''
         self._visainstrument.write(command)
-    def retreive_data(self, query):
+    def retrieve_data(self, query):
         '''
         Reads data from the instrument
             Input:
@@ -214,6 +222,11 @@ class Keysight_N5183B(Instrument):
         Reset to default state
         '''
         self._visainstrument.write('*RST')
+        
+    def set_power(self, attenuation):
+        self._visainstrument.write('POW %sDB' %attenuation)
+    def get_power(self):
+        return self._visainstrument.ask('POW?')
     def get_all(self):
         '''
         Reads data for all parameters

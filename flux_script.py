@@ -15,8 +15,8 @@ from instruments import Instruments
 vna_name = 'VNA'
 cs_name = 'YOKO'
 min_current = 0 #Ampere
-max_current = .3e-3 #Ampere         1e-3  previous
-current_step = .005e-3 #Ampere    .0025e-3 previous
+max_current = .5e-3 #Ampere         1e-3  previous
+current_step = .025e-3 #Ampere    .0025e-3 previous
 ramp_rate = .01 #Ampere/second
 yoko_program_file_name = 'fluxsweep.csv'
 start = 7.6e9 #Hz
@@ -26,13 +26,14 @@ num_averages = 12 #Counts
 wait = .6*num_averages #seconds (.6*num_averages? [for IF=3e3])
 #trform = 'PLOG'
 trform = 'PHAS'
-h5py_filepath = 'C:\\Qtlab\\'
+h5py_filepath = 'C:\\Qtlab\\flux_sweep_data\\'
 now = dt.datetime.now()
-date_time = '{month}_{day}_{year}_{hour}(1)'.format(month = now.month,
+date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
                                                         day = now.day,
                                                         year = now.year,
-                                                        hour = now.hour)
-h5py_filename = 'test'# + date_time
+                                                        hour = now.hour,
+                                                        minute = now.minute)
+h5py_filename = 'signal_sweep_' + date_time
 
 fp = h5py.File(h5py_filepath + h5py_filename, 'w')
 # Get Instruments
@@ -65,13 +66,13 @@ if current_step>0:
     while value < max_current:
         currents.append(value)
         value += current_step
-    currents.append(value)
+    currents.append(max_current)
 else:
     value = max_current
     while value > min_current:
         currents.append(value)
         value += current_step
-    currents.append(value)
+    currents.append(min_current)
     
 if (YOKO.get_output_level() != currents[0]):    
     time.sleep(YOKO.change_current(currents[0])) #set current to staritng value
