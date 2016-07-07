@@ -9,10 +9,12 @@ import h5py
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as color
+from matplotlib.widgets import Cursor
 import numpy as np
 
+#Load data from file
 h5py_filepath = 'C:\\Qtlab\\flux_sweep_data\\'
-h5py_filename = 'signal_sweep_7_6_2016_11_54'
+h5py_filename = 'signal_sweep_7_6_2016_11_6'
 
 fp2 = h5py.File(h5py_filepath + h5py_filename, 'r') 
 
@@ -44,20 +46,35 @@ _norm=color.Normalize(vmin=-180, vmax=180)
 
 if ar_current_data[0] > ar_current_data[-1]:
     array = array[::-1]
-plt.imshow(array.transpose(), interpolation='nearest', aspect='auto', origin = 'lower', cmap=_cmap, norm=_norm)
-
-y=np.linspace(ar_freq[0], ar_freq[-1], 21)/1e9
-y_space=[float(1601)/20*float(val) for val in range(len(y))]
-
+    
+# Setup Plot
+fig = plt.figure()
+ax = fig.add_subplot(111)
+im = ax.imshow(array.transpose(), interpolation='nearest', aspect='auto', 
+           origin = 'lower', cmap=_cmap, norm=_norm)
+          
+fig.colorbar(im).set_label('phase(degrees)')
 plt.title('Plot from %s' % h5py_filename)
-plt.yticks(np.array(y_space), y)
+
+# Y axis setup
+y_labels = np.linspace(ar_freq[0], ar_freq[-1], 21)/1e9
+y_loc = [float(1601)/20*float(val) for val in range(len(y_labels))]
+plt.yticks(np.array(y_loc), y_labels)
 plt.ylabel('frequency(GHz)')
 
-
+# X axis setup
 num_x_ticks = 20
-x_ticks = np.arange(ar_current_data[0], ar_current_data[-1], (ar_current_data[-1] - ar_current_data[0])/num_x_ticks)
-x_loc=[len(ar_current_data)/float(num_x_ticks)*i for i in range(num_x_ticks)]
-plt.xticks(x_loc, x_ticks*1000, rotation=90)
+x_labels = np.arange(ar_current_data[0], ar_current_data[-1], 
+                    (ar_current_data[-1] - ar_current_data[0])/num_x_ticks)
+x_loc = [len(ar_current_data)/float(num_x_ticks)*i for i in range(num_x_ticks)]
+plt.xticks(x_loc, x_labels*1000, rotation=90)
 plt.xlabel('Current (mA)')
-plt.colorbar().set_label('phase(degrees)')
+
+cursor = Cursor(ax, useblit=True, color ='white', linewidth = 1)
+def format_coord(x,y):
+    current = ar_current_data[int(x)]*100
+    frequency = ar_freq[int(y)]/1e9
+    return ('Current = {} mA, Frequency = {} GHz, Phase = '.format(current, frequency))
+ax.format_coord = format_coord
+
 plt.show()
