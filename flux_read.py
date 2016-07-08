@@ -2,7 +2,7 @@
 """
 Created on Thu Jun 30 13:19:35 2016
 
-@author: HATLAB
+@author: HATLAB Erick Brindock
 """
 
 import h5py

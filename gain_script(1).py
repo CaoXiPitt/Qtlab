@@ -69,14 +69,14 @@ if POWER_STEP>0:
     while value < MAX_POWER:
         powers.append(value)
         value += POWER_STEP
-    powers.append(MAX_POWER)
+    powers.append(value)
 else:
     value = MAX_POWER
     while value > MIN_POWER:
         powers.append(value)
         value += POWER_STEP
     powers.append(value)
-powers = np.array(MAX_POWER)
+powers = np.array(powers)
 
 frequencies = []
 if FREQUENCY_STEP>0:
