@@ -63,36 +63,13 @@ date_time = '{month}_{day}_{year}_{hour}'.format(month = now.month,
                                                         hour = now.hour)
 h5py_filename = 'JPC_pump_sweep_' + date_time #JPC_gain_ + date_time
 
-powers = []
-if POWER_STEP>0:
-    value = MIN_POWER
-    while value < MAX_POWER:
-        powers.append(value)
-        value += POWER_STEP
-    powers.append(value)
-else:
-    value = MAX_POWER
-    while value > MIN_POWER:
-        powers.append(value)
-        value += POWER_STEP
-    powers.append(value)
-powers = np.array(powers)
+powers = np.append(np.arange(MIN_POWER, MAX_POWER, POWER_STEP), MAX_POWER)
 
-frequencies = []
-if FREQUENCY_STEP>0:
-    value = MIN_PUMP_FREQUENCY
-    while value < MAX_PUMP_FREQUENCY:
-        frequencies.append(value)
-        value += PUMP_FREQUENCY_STEP
-    frequencies.append(MAX_PUMP_FREQUENCY)
-else:
-    value = MAX_PUMP_FREQUENCY
-    while value > MIN_PUMP_FREQUENCY:
-        frequencies.append(value)
-        value += PUMP_FREQUENCY_STEP
-    frequencies.append(MIN_PUMP_FREQUENCY)
-frequencies = np.array(frequencies)
- #frequencies = np.arange(MIN_PUMP_FREQUENCY, MAX_PUMP_FREQUENCY,)   
+frequencies = np.append(np.arange(MIN_PUMP_FREQUENCY, 
+                                  MAX_PUMP_FREQUENCY, 
+                                  PUMP_FREQUENCY_STEP), 
+                        MAX_PUMP_FREQUENCY)
+  
 fp = h5py.File(h5py_filepath + h5py_filename, 'w')
 
 fp.create_dataset('frequencies', data = frequencies)

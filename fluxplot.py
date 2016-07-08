@@ -81,7 +81,7 @@ class FluxPlotClass(object):
         
         # X axis setup
         num_x_ticks = 20
-        if self.ar_current_data[-1] - self.ar_current_data[0] < num_x_ticks:
+        if len(self.ar_current_data) < num_x_ticks:
             num_x_ticks = 1
         x_labels = np.arange(self.ar_current_data[0], self.ar_current_data[-1], 
                             (self.ar_current_data[-1] - self.ar_current_data[0])/num_x_ticks)
@@ -89,7 +89,7 @@ class FluxPlotClass(object):
         plt.xticks(x_loc, x_labels*1000, rotation=90)
         plt.xlabel('Current (mA)')
         
-        cursor = Cursor(ax, useblit=True, color ='white', linewidth = 1)
+        self.cursor = Cursor(ax, useblit=True, color ='white', linewidth = 1)
         def format_coord(x,y):
             current = self.ar_current_data[int(x)]*100
             frequency = self.ar_freq[int(y)]/1e9
