@@ -37,8 +37,12 @@ class GainSweepPlot(object):
 #    fp.close()
     def plot_data(self):
         # Main Data Plot Setup
-        self.data_plot, = plt.plot(self.measurement_frequency, self.gain[10])
-        plt.axis([self.measurement_frequency[0], self.measurement_frequency[-1], -5, 30])
+        print len(self.measurement_frequency)
+        print type(self.measurement_frequency)
+        print self.gain[0,0]
+        print self.gain.shape
+        self.data_plot, = plt.plot(self.measurement_frequency, self.gain[0,0]))
+        plt.axis([self.measurement_frequency[0], self.measurement_frequency[-1], -15, 30])
         plt.gcf().subplots_adjust(left = .05, right = .95,top = .95, bottom = .15)
         plt.title('Power and Frequency Sweep')
         plt.xlabel('Frequency (Ghz)')
@@ -102,9 +106,9 @@ class GainSweepPlot(object):
     def load_data_from_file(self, 
             filename='C:\\Qtlab\\gain_sweep_data\\JPC_pump_sweep_7_6_2016_15'):
         infile = h5py.File(filename, 'a')
-        self.sweep_freqs = infile['frequencies'][:]
+        self.sweep_freqs = infile['pump_frequencies'][:]
         self.sweep_freqs = self.sweep_freqs.tolist()
-        self.sweep_powers = infile['powers'][:]
+        self.sweep_powers = infile['pump_powers'][:]
         self.sweep_powers = self.sweep_powers.tolist()
         for i in range(len(self.sweep_powers)):  # Remove floating point error
             self.sweep_powers[i] = int(self.sweep_powers[i]*10)/10.0
@@ -112,5 +116,5 @@ class GainSweepPlot(object):
 #        for fi in range(len(self.sweep_freqs)):
 #            for pi in range(len(self.sweep_powers)):
 #                self.gain.append(infile['trace_data_{}_{}'.format(self.sweep_powers[pi], self.sweep_freqs[fi])][0])
-        self.measurement_frequency = infile['fdata_{}_{}'.format(self.sweep_powers[0], self.sweep_freqs[0])][:]
+        self.measurement_frequency = infile['measure_frequencies'][:]
         infile.close()

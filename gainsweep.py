@@ -86,7 +86,7 @@ h5py_filename = 'JPC_pump_sweep_' + date_time #JPC_gain_ + date_time
 POWERS = np.append(np.arange(MIN_POWER, MAX_POWER, POWER_STEP), MAX_POWER)
 def set_powers(powers = POWERS):
     global POWERS
-    POWERS = powers
+    POWERS = powers.tolist()
     
 FREQUENCIES = np.append(np.arange(MIN_PUMP_FREQUENCY, 
                                   MAX_PUMP_FREQUENCY, 
@@ -94,16 +94,16 @@ FREQUENCIES = np.append(np.arange(MIN_PUMP_FREQUENCY,
                         MAX_PUMP_FREQUENCY)
 def set_frequencies(frequencies = FREQUENCIES):
     global FREQUENCIES
-    FREQUENCIES = frequencies
+    FREQUENCIES = frequencies.tolist()
     
-fp = h5py.File(h5py_filepath + h5py_filename, 'w')
+#fp = h5py.File(h5py_filepath + h5py_filename, 'w')
 
-fp.create_dataset('pump_frequencies', data = FREQUENCIES)
-fp.create_dataset('pump_powers', data = POWERS)
+#fp.create_dataset('pump_frequencies', data = FREQUENCIES)
+#fp.create_dataset('pump_powers', data = POWERS)
 
 #Get data to normalize
 NORMALIZE_DATA = []
-fp.create_dataset('freq_norm', data = NORMALIZE_DATA)
+#fp.create_dataset('freq_norm', data = NORMALIZE_DATA)
 def get_normalization_data():
     GEN.set_output_status(0)
     VNA.average(num_averages, wait)
@@ -133,9 +133,10 @@ def sweep_power_and_frequency():
     global FREQUENCIES
     global POWERS
     global MEASURED_FREQUENCIES
-    MEASURED_FREQUENCIES = VNA.getfdata()
+    MEASURED_FREQUENCIES = VNA.getfdata().tolist()
+    print type(MEASURED_FREQUENCIES)
     global SWEEP_DATA
-    SWEEP_DATA = np.empty(len(FREQUENCIES), len(POWERS), len(MEASURED_FREQUENCIES))
+    SWEEP_DATA = np.empty((len(FREQUENCIES), len(POWERS), len(MEASURED_FREQUENCIES)))
     for fi in range(len(FREQUENCIES)): 
         GEN.set_frequency(FREQUENCIES[fi])    
         for pi in range(len(POWERS)):
@@ -150,7 +151,7 @@ def save_data_to_h5py(filename = None):
     if filename is None:
         h5py_filepath = 'C:\\Qtlab\\gain_sweep_data\\'
         now = dt.datetime.now()
-        date_time = '{month}_{day}_{year}_{hour}'.format(month = now.month,
+        date_time = '{month}_{day}_{year}_{hour}(1)'.format(month = now.month,
                                                         day = now.day,
                                                         year = now.year,
                                                         hour = now.hour)
