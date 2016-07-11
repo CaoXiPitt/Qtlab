@@ -177,7 +177,8 @@ def run_sweep():
     set_frequencies()
     get_normalization_data()
     sweep_power_and_frequency()
+    reset_instrument_state()
     save_data_to_h5py()
 
-if __name__ = '__main__':
+if __name__ == '__main__':
     run_sweep()

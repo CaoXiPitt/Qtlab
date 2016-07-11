@@ -17,8 +17,7 @@ class FluxPlotClass(object):
         if filename is not None:
             self.load_from_file(filename)
         else:
-            self.filename = 'default'
-        self.name = 'Erick'
+            self.add_data_set(frequencies, currents, phases)
         
     def load_from_file(self, 
                 h5py_filepath=

@@ -35,7 +35,7 @@ date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
                                                         minute = now.minute)
 h5py_filename = 'signal_sweep_' + date_time
 
-fp = h5py.File(h5py_filepath + h5py_filename, 'w')
+
 # Get Instruments
 VNA = qt.instruments.get('VNA')
 YOKO = qt.instruments.get('YOKO')
@@ -45,9 +45,11 @@ YOKO = qt.instruments.get('YOKO')
 #TODO  see untitled 2 and 4 for reference
 #TODO -------------------------------------------------------------------------
 
-def get_instruments(self,vna_name = VNA_NAME, cs_name = CS_NAME):
-    self.VNA = qt.instruments.get(vna_name)
-    self.YOKO = qt.instrments.get(cs_name)
+def get_instruments(vna_name = VNA_NAME, cs_name = CS_NAME):
+    global VNA
+    VNA = qt.instruments.get(vna_name)
+    global YOKO
+    YOKO = qt.instrments.get(cs_name)
     
 # Get original parameters VNA
 init_fstart = VNA.get_fstart()
@@ -59,20 +61,35 @@ init_num_averages = VNA.get_avgnum()
 # Get original parameters YOKO
 old_ramp_time = YOKO.get_slope_interval()
 
+def store_instrument_parameters():
+    global init_fstart
+    init_fstart = VNA.get_fstart()
+    global init_fstop
+    init_fstop = VNA.get_fstop()
+    global init_ifbw
+    init_ifbw = VNA.get_ifbw()
+    global init_trform
+    init_trform = VNA.get_trform()
+    global init_num_averages
+    init_num_averages = VNA.get_avgnum()
+    global old_ramp_time
+    old_ramp_time = YOKO.get_slope_interval()
+    
 # Set parameters VNA
-VNA.set_fstart(start)
-VNA.set_fstop(stop)
-VNA.set_ifbw(IF)
-VNA.set_trform(trform)
+#VNA.set_fstart(start)
+#VNA.set_fstop(stop)
+#VNA.set_ifbw(IF)
+#VNA.set_trform(trform)
 
 ramp_time = 30
-def set_instrument_parameters(self):
+def set_instrument_parameters():
     VNA.set_fstart(start)
     VNA.set_fstop(stop)
     VNA.set_ifbw(IF)
     VNA.set_trform(trform)
     # Set parameters YOKO
-    self.ramp_time = YOKO.set_ramp_intervals(step = CURRENT_STEP, rate = RAMP_RATE)
+    global ramp_time
+    ramp_time = YOKO.set_ramp_intervals(step = CURRENT_STEP, rate = RAMP_RATE)
 
 currents = []
 # Populate current values
@@ -83,6 +100,7 @@ def create_currents(min_current = MIN_CURRENT,
     Creates a list of currents to sweep through. (Note: if current_step is 
     negative it will count from max_current down to min_current)
     '''
+    global currents
     if current_step>0:
         value = min_current
         while value < max_current:
@@ -97,44 +115,65 @@ def create_currents(min_current = MIN_CURRENT,
         currents.append(min_current)
     return currents
 
-def store_instrument_parameters(self):
-    self.init_fstart = VNA.get_fstart()
-    self.init_fstop = VNA.get_fstop()
-    self.init_ifbw = VNA.get_ifbw()
-    self.init_trform = VNA.get_trform()
-    self.init_num_averages = VNA.get_avgnum()
-    self.old_ramp_time = YOKO.get_slope_interval()
     
 frequency_data = []
-def ask_frequency_data(self):
-    self.frequency_data = VNA.getfdata()
+def ask_frequency_data():
+    global frequency_data
+    frequency_data = VNA.getfdata()
     
 phase_data = [] 
-def sweep_current(self,currents):    
+def sweep_current(current = currents):    
     if (YOKO.get_output_level() != currents[0]):    
         time.sleep(YOKO.change_current(currents[0])) #set current to staritng value
     i = 0
+    
     for current in currents:
         print ('Testing at %s Amps' %current)
         YOKO.change_current(current)
         time.sleep(ramp_time)    #wait for current to reach new value
         VNA.average(num_averages, wait)
-        fdata = VNA.getfdata()
-        self.phase_data[i] = VNA.gettrace()[0]
-        fp.create_dataset('trace_data{}'.format(i), data=phase_data)
+        global phase_data
+        phase_data[i] = VNA.gettrace()[0]
         i+=1
-    fp.create_dataset('frequency_data', data=fdata)
+
+def save_data_to_h5py(filename = None):
+    if filename is None:
+        h5py_filepath = 'C:\\Qtlab\\flux_sweep_data\\'
+        now = dt.datetime.now()
+        date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
+                                                        day = now.day,
+                                                        year = now.year,
+                                                        hour = now.hour,
+                                                        minute = now.minute)
+        h5py_filename = 'signal_sweep_' + date_time
+        filename = h5py_filepath + h5py_filename
+    fp = h5py.File(filename, 'w')
+    fp.create_dataset('trace_data', data=phase_data)
+    fp.create_dataset('frequency_data', data=frequency_data)
     fp.create_dataset('current_data', data = currents)    
     fp.close()
+    
+def reset_instruments_to_default():
+    VNA.set_fstart(init_fstart)
+    VNA.set_fstop(init_fstop)
+    VNA.set_ifbw(init_ifbw)
+    VNA.set_trform(init_trform)
+    VNA.set_avgnum(init_num_averages)
+    YOKO.set_slope_interval(old_ramp_time)
 
-VNA.set_fstart(init_fstart)
-VNA.set_fstop(init_fstop)
-VNA.set_ifbw(init_ifbw)
-VNA.set_trform(init_trform)
-VNA.set_avgnum(init_num_averages)
-
-YOKO.set_slope_interval(old_ramp_time)
-
-if __name__ == '__main__':
+def run_sweep(sweep_currents = currents):
     get_instruments()
-    currents = create_currents()
+    store_instrument_parameters()
+    set_instrument_parameters()
+    create_currents()
+    sweep_current(sweep_currents)
+    ask_frequency_data()
+    save_data_to_h5py()
+    reset_instruments_to_default()
+    plot = fluxplot.FluxPlotClass(frequencies = frequency_data,
+                                  currents = currents,
+                                  phases = phase_data)
+    plot.plot_data()
+    
+if __name__ == '__main__':
+    run_sweep()        
