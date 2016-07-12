@@ -32,10 +32,8 @@ stop =MAX_MEASURE_FREQUENCY #Hz
 IF = 3e3 #Hz
 num_averages = 12 #Counts
 wait = .6*num_averages #seconds (.6*num_averages? [for IF=3e3])
-#trform = 'PLOG'
 trform = 'MLOG'
 ELECTRICAL_DELAY = 63e-9 #sec
-#PHASE_OFFSET =
      
 VNA = qt.instruments.get('VNA')
 GEN = qt.instruments.get('GEN')
@@ -112,22 +110,6 @@ def get_normalization_data():
     GEN.set_output_status(1)
 
 MEASURED_FREQUENCIES = []
-#def run_sweep():
-#    global FREQUENCIES
-#    global POWERS
-#    global MEASURED_FREQUENCIES
-#    MEASURED_FREQUENCIES = VNA.getfdata()
-#    for frequency in FREQUENCIES: 
-#        GEN.set_frequency(frequency)    
-#        for power in POWERS:
-#            GEN.set_power(power)
-#            #TODO get trace data
-#            print ('Power = {}dBm, Frequency = {}GHz'.format(power-20, frequency/1e9))
-#            VNA.average(num_averages, wait)
-#            fdata  = VNA.getfdata()
-#            fp.create_dataset('fdata_{}_{}'.format(power, frequency), data = fdata)
-#            trace_data = VNA.gettrace()
-#            fp.create_dataset('trace_data_{}_{}'.format(power, frequency), data = trace_data)
 SWEEP_DATA = []
 def sweep_power_and_frequency():
     global FREQUENCIES
@@ -160,8 +142,10 @@ def save_data_to_h5py(filename = None):
     outfile = h5py.File(filename, 'w')
     outfile.create_dataset('pump_frequencies', data = FREQUENCIES)
     outfile.create_dataset('pump_powers', data = POWERS)
-    outfile.create_dataset('normal_frequencies', data = NORMALIZE_DATA)
-    outfile.create_dataset('sweep_data', data = SWEEP_DATA)        
+    #TODO change to normal data
+    outfile.create_dataset('normal_data', data = NORMALIZE_DATA)
+    outfile.create_dataset('sweep_data', data = SWEEP_DATA)
+    outfile.create_dataset('measure_freqeuncies', data = MEASURED_FREQUENCIES)        
     outfile.close()
 def reset_instrument_state():
     VNA.set_fstart(init_fstart)

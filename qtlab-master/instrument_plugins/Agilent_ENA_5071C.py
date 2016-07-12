@@ -109,7 +109,8 @@ class Agilent_ENA_5071C(Instrument):
         
         self.add_parameter('electrical_delay', flags=Instrument.FLAG_GETSET,
                            type=types.FloatType)
-        
+        self.add_parameter('phase_offset', flags = Instrument.FLAG_GETSET,
+                           type=types.FloatType)
         self.add_function('reset')
         self.add_function('get_all')
         self.add_function('getfdata')
@@ -194,7 +195,22 @@ class Agilent_ENA_5071C(Instrument):
 #            except:
 #                cont=True
 #        return
-    
+    def do_get_phase_offset(self):
+        '''
+        Reads the phase offset
+        
+            Output:
+                offset (float) : the phase offset in degrees
+        '''
+        return self._visainstrument.ask(':CALC1:CORR:OFFS:PHAS?')
+        
+    def do_set_phase_offset(self, offset):
+        '''
+        Sets the phase offset
+            Input:
+                offset (float) : the phase offset in degrees
+        '''
+        self._visainstrument.write(':CALC1:CORR:OFFS:PHAS %s' % offset)
     def average(self, number, time_to_wait):
         '''
         

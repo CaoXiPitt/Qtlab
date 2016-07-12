@@ -26,6 +26,7 @@ num_averages = 12 #Counts
 wait = .6*num_averages #seconds (.6*num_averages? [for IF=3e3])
 #trform = 'PLOG'
 trform = 'PHAS'
+phase_offset = 0
 h5py_filepath = 'C:\\Qtlab\\flux_sweep_data\\'
 now = dt.datetime.now()
 date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
@@ -39,12 +40,6 @@ h5py_filename = 'signal_sweep_' + date_time
 # Get Instruments
 VNA = qt.instruments.get('VNA')
 YOKO = qt.instruments.get('YOKO')
-
-#TODO -------------------------------------------------------------------------
-#TODO  use global variables
-#TODO  see untitled 2 and 4 for reference
-#TODO -------------------------------------------------------------------------
-
 def get_instruments(vna_name = VNA_NAME, cs_name = CS_NAME):
     global VNA
     VNA = qt.instruments.get(vna_name)
@@ -57,10 +52,9 @@ init_fstop = VNA.get_fstop()
 init_ifbw = VNA.get_ifbw()
 init_trform = VNA.get_trform()
 init_num_averages = VNA.get_avgnum()
-
+init_phase_offset = VNA.get_phase_offset()
 # Get original parameters YOKO
 old_ramp_time = YOKO.get_slope_interval()
-
 def store_instrument_parameters():
     global init_fstart
     init_fstart = VNA.get_fstart()
@@ -72,14 +66,10 @@ def store_instrument_parameters():
     init_trform = VNA.get_trform()
     global init_num_averages
     init_num_averages = VNA.get_avgnum()
+    global init_phase_offset
+    init_phase_offset = VNA.get_phase_offset()    
     global old_ramp_time
     old_ramp_time = YOKO.get_slope_interval()
-    
-# Set parameters VNA
-#VNA.set_fstart(start)
-#VNA.set_fstop(stop)
-#VNA.set_ifbw(IF)
-#VNA.set_trform(trform)
 
 ramp_time = 30
 def set_instrument_parameters():
@@ -87,6 +77,7 @@ def set_instrument_parameters():
     VNA.set_fstop(stop)
     VNA.set_ifbw(IF)
     VNA.set_trform(trform)
+    VNA.set_phase_offset(phase_offset)
     # Set parameters YOKO
     global ramp_time
     ramp_time = YOKO.set_ramp_intervals(step = CURRENT_STEP, rate = RAMP_RATE)
@@ -159,6 +150,7 @@ def reset_instruments_to_default():
     VNA.set_ifbw(init_ifbw)
     VNA.set_trform(init_trform)
     VNA.set_avgnum(init_num_averages)
+    VNA.set_phase_offset(init_phase_offset)
     YOKO.set_slope_interval(old_ramp_time)
 
 def run_sweep(sweep_currents = currents):
@@ -168,8 +160,8 @@ def run_sweep(sweep_currents = currents):
     create_currents()
     sweep_current(sweep_currents)
     ask_frequency_data()
-    save_data_to_h5py()
     reset_instruments_to_default()
+    save_data_to_h5py()
     plot = fluxplot.FluxPlotClass(frequencies = frequency_data,
                                   currents = currents,
                                   phases = phase_data)
