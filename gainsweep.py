@@ -162,7 +162,7 @@ def sweep_power_and_frequency():
             trace_data = VNA.gettrace()
             SWEEP_DATA[fi][pi] = trace_data[0]
     GEN.set_power(-20)
-def save_data_to_h5py(filename = None):
+def save_data_to_h5py(filename):
     '''
     Saves the most recent data to an h5py file.
         Args:
@@ -175,18 +175,18 @@ def save_data_to_h5py(filename = None):
     if filename is None:
         h5py_filepath = 'C:\\Qtlab\\gain_sweep_data\\'
         now = dt.datetime.now()
-        date_time = '{month}_{day}_{year}_{hour}'.format(month = now.month,
+        date_time = '{month}_{day}_{year}_{hour}:{minute}'.format(month = now.month,
                                                         day = now.day,
                                                         year = now.year,
-                                                        hour = now.hour)
-        h5py_filename = 'JPC_pump_sweep_' + date_time #JPC_gain_ + date_time
+                                                        hour = now.hour,
+                                                        minute = now.minute)
+        h5py_filename = 'JPC_pump_sweep_' + date_time
         filename = h5py_filepath + h5py_filename
     else:
         filename = filename
     outfile = h5py.File(filename, 'w')
     outfile.create_dataset('pump_frequencies', data = FREQUENCIES)
     outfile.create_dataset('pump_powers', data = POWERS)
-    #TODO change to normal data
     outfile.create_dataset('normal_data', data = NORMALIZE_DATA)
     outfile.create_dataset('sweep_data', data = SWEEP_DATA)
     outfile.create_dataset('measure_frequencies', data = MEASURED_FREQUENCIES)        
@@ -202,7 +202,7 @@ def reset_instrument_state():
     VNA.set_trform(init_trform)
     VNA.set_electrical_delay(init_elec_delay)
     
-def run_sweep():
+def run_sweep(filename = None):
     '''
     Command to initial instruments, set parameters, run sweep, save data, etc.
     This uses settings in #Settings or the most recent changes made by the set_
@@ -216,7 +216,7 @@ def run_sweep():
     #get_normalization_data()
     sweep_power_and_frequency()
     reset_instrument_state()
-    save_data_to_h5py()
+    save_data_to_h5py(filename)
 
 if __name__ == '__main__':
     run_sweep()

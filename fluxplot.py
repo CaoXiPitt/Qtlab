@@ -11,7 +11,7 @@ import matplotlib.colors as color
 from matplotlib.widgets import Cursor
 import numpy as np
 
-class FluxPlotClass(object):
+class FluxSweepPlot(object):
     def __init__(self, filename = None, frequencies = None, currents = None,
                  phases = None):
         if filename is not None:

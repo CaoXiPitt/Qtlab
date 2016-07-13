@@ -85,7 +85,7 @@ def set_instrument_parameters():
 
 currents = []
 # Populate current values
-def create_currents(min_current = MIN_CURRENT,
+def set_currents(min_current = MIN_CURRENT,
                     max_current = MAX_CURRENT,
                     current_step = CURRENT_STEP):
     '''
@@ -148,7 +148,7 @@ def save_data_to_h5py(filename = None):
     fp.create_dataset('current_data', data = currents)    
     fp.close()
     
-def reset_instruments_to_default():
+def reset_instrument_state():
     VNA.set_fstart(init_fstart)
     VNA.set_fstop(init_fstop)
     VNA.set_ifbw(init_ifbw)
@@ -162,12 +162,12 @@ def run_sweep(sweep_currents = None):
     store_instrument_parameters()
     set_instrument_parameters()
     if sweep_currents is None:
-        sweep_currents = create_currents()
+        sweep_currents = set_currents()
     sweep_current(sweep_currents)
     ask_frequency_data()
-    reset_instruments_to_default()
+    reset_instrument_state()
     save_data_to_h5py()
-    plot = fluxplot.FluxPlotClass(frequencies = frequency_data,
+    plot = fluxplot.FluxSweepPlot(frequencies = frequency_data,
                                   currents = currents,
                                   phases = phase_data)
     plot.plot_data()

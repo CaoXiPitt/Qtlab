@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import h5py
 import numpy as np
-import gainsweep as sweep
+#import gainsweep as sweep
 
 class GainSweepPlot(object):
     def __init__(self, filename = None, frequencies = None, powers = None,
@@ -38,12 +38,12 @@ class GainSweepPlot(object):
         '''
         if filename is not None:
             self.load_data_from_file(filename)
-        else:
+        elif (frequencies is not None and powers is not None and gains is not None and measurement_frequencies is not None):
             self.add_data_set(frequencies, powers, gains, measurement_frequencies)
     def plot_data_from_sweep(self, sweep):
-        self.add_data_set(frequencies = sweep.FREQUENCIES, powers = sweep.POWERS,
-                          gains = sweep.SWEEP_DATA-sweep.NORMALIZE_DATA[0],
-                          measurement_frequencies = sweep.MEASURED_FREQUENCIES)
+        self.add_data_set(sweep.FREQUENCIES, sweep.POWERS, sweep.SWEEP_DATA,
+                          sweep.MEASURED_FREQUENCIES, 
+                          background = sweep.NORMALIZATION_DATA)
         self.plot_data()
     def plot_data(self):
         '''
@@ -85,29 +85,71 @@ class GainSweepPlot(object):
         if (self.freq_slider.val != self.sweep_freqs[findex]):
             self.freq_slider.set_val(self.sweep_freqs[findex])
             
-    def add_data_set(self, frequencies, powers, gains, measurement_frequencies):
-        self.sweep_freqs = frequencies
-        self.sweep_powers = powers
-        self.gain = gains
+    def add_data_set(self, frequencies, powers, gains, measurement_frequencies, background = None):
+        '''
+        Adds data to be used to make a plot. If optional background arguemnt is
+        included, it will be used to normalize the data contained in the gains 
+        arguement.
+            Args:
+                frequencies (numpy.1darray) : 
+                the frequencies swept through
+                powers (numpy.1darray) : 
+                the powers swept through
+                gains (numpy.3darray) : 
+                the gains measured for each [frequency, power] (y values)
+                measurement_frequencies (numpy.1darray) : 
+                the frequencies at which each gain measurement is taken (x val)
+                background (numpy.2darray) : 
+                the background noise used to normalize the gains
+        '''
+        self.sweep_freqs = frequencies.tolist()
+        self.sweep_powers = powers.tolist()
+        if background is None:
+            self.gain = np.copy(gains)
+        else:
+            self.normalize_data(background)
         self.measurement_frequency = measurement_frequencies
         
-    def load_data_from_file(self, 
-            filename='C:\\Qtlab\\gain_sweep_data\\JPC_pump_sweep_7_6_2016_15'):
+    def normalize_data(self, background):
         '''
-        Loads data from a file to be plotted
+        Normalizes the gains using the background. This method assumes that a 
+        new background reading is taken for each frequency.
             Args:
-                filename (string) : the filepath and file name to be plotted
+                gains (numpy.3darray) : 
+                the gains measured for each [frequency, power] (y values)
+                background (numpy.2darray) : 
+                the background noise used to normalize the gains
+                name courtesy of Edan Benjamin Alpern
         '''
-        infile = h5py.File(filename, 'a')
-        self.sweep_freqs = infile['pump_frequencies'][:]
-        self.sweep_freqs = self.sweep_freqs.tolist()
-        self.sweep_powers = infile['pump_powers'][:]
-        self.sweep_powers = self.sweep_powers.tolist()
-        for i in range(len(self.sweep_powers)):  # Remove floating point error
-            self.sweep_powers[i] = int(self.sweep_powers[i]*10)/10.0
+        print 'normalizing data'
+        for i in range(self.gain.shape[0]):
+            self.gain[i] = self.gain[i]- background[i]
+    def load_data_from_file(self, filename, normalized = False):
+        '''
+        Loads data from an h5py file to be plotted
+            Args:
+                filename (string) : 
+                the filepath and file name to be plotted
+            Optional Args:
+                normalized (boolean) : 
+                whether the gain data has been normalized. If False this method
+                will normalize the data using the normalizatoin data in the 
+                file
+        '''
+        infile = h5py.File(filename, 'r')
+        self.sweep_freqs = np.array(infile['pump_frequencies'])
+        self.sweep_powers = np.array(infile['pump_powers'])
+#        for i in range(len(self.sweep_powers)):  # Remove floating point error
+#            self.sweep_powers[i] = int(self.sweep_powers[i]*10)/10.0
         self.gain = np.array(infile['sweep_data'])
-        self.measurement_frequency = infile['measure_frequencies'][:]
-        #TODO changed to normal_data check fro proper format of file used
-        self.normalize_data = infile['normal_data'][0]
-        self.gain = np.subtract(self.gain, self.normalize_data)
+        self.measurement_frequency = np.array(infile['measure_frequencies'])
+        if normalized:
+            self.add_data_set(self.sweep_freqs, self.sweep_powers, self.gain,
+                                self.measurement_frequency)
+        else:
+            print type(self)
+            self.unpumped_data = np.array(infile['normal_data'])
+            self.add_data_set(self.sweep_freqs, self.sweep_powers, self.gain,
+                                self.measurement_frequency, 
+                                background = self.unpumped_data)
         infile.close()
