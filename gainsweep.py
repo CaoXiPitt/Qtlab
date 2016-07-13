@@ -11,15 +11,15 @@ import datetime as dt
 import h5py
 import numpy as np
 
-
+# Settings --------------------------------------------------------------------
 vna_name = 'VNA'
 signal_gen_name = 'GEN'
 
 MIN_POWER = -40 #dBm total power
 MAX_POWER = -32 #dBm total power 
-POWER_STEP = 0.4 #dbm
-MIN_PUMP_FREQUENCY = 14.982871e9 #Hz
-MAX_PUMP_FREQUENCY = 15.082871e9 #Hz
+POWER_STEP = 1 #dbm
+MIN_PUMP_FREQUENCY = 15.022871e9 #Hz
+MAX_PUMP_FREQUENCY = 15.042871e9 #Hz
 PUMP_FREQUENCY_STEP = .005e9
 MIN_MEASURE_FREQUENCY = 8.7919e9 #Hz
 MAX_MEASURE_FREQUENCY = 8.8919e9 #Hz
@@ -30,11 +30,11 @@ MAX_POWER = MAX_POWER + 20 # factor in -20dB attenuator
 start = MIN_MEASURE_FREQUENCY #Hz
 stop =MAX_MEASURE_FREQUENCY #Hz
 IF = 3e3 #Hz
-num_averages = 12 #Counts
+num_averages = 24 #Counts
 wait = .6*num_averages #seconds (.6*num_averages? [for IF=3e3])
 trform = 'MLOG'
 ELECTRICAL_DELAY = 63e-9 #sec
-     
+# End of Settings -------------------------------------------------------------     
 VNA = qt.instruments.get('VNA')
 GEN = qt.instruments.get('GEN')
 def get_instruments(name = vna_name):
@@ -52,6 +52,9 @@ init_num_averages = VNA.get_avgnum()
 init_elec_delay = VNA.get_electrical_delay()
 
 def store_instrument_parameters():
+    '''
+    Stores the instrument settings so they can be reset later
+    '''
     global init_fstart
     init_fstart = VNA.get_fstart()
     global init_fstop
@@ -66,6 +69,9 @@ def store_instrument_parameters():
     init_elec_delay = VNA.get_electrical_delay()
     
 def set_instrument_parameters():
+    '''
+    Sets the instruments to the #Settings values for the test to be run
+    '''
     # set VNA parameters
     VNA.set_fstart(start)
     VNA.set_fstop(stop)
@@ -73,16 +79,21 @@ def set_instrument_parameters():
     VNA.set_trform(trform)
     VNA.set_electrical_delay(ELECTRICAL_DELAY)
 
-h5py_filepath = 'C:\\Qtlab\\gain_sweep_data\\'
-now = dt.datetime.now()
-date_time = '{month}_{day}_{year}_{hour}'.format(month = now.month,
-                                                        day = now.day,
-                                                        year = now.year,
-                                                        hour = now.hour)
-h5py_filename = 'JPC_pump_sweep_' + date_time #JPC_gain_ + date_time
+#h5py_filepath = 'C:\\Qtlab\\gain_sweep_data\\'
+#now = dt.datetime.now()
+#date_time = '{month}_{day}_{year}_{hour}'.format(month = now.month,
+#                                                        day = now.day,
+#                                                        year = now.year,
+#                                                        hour = now.hour)
+#h5py_filename = 'JPC_pump_sweep_' + date_time #JPC_gain_ + date_time
 
 POWERS = np.append(np.arange(MIN_POWER, MAX_POWER, POWER_STEP), MAX_POWER)
 def set_powers(powers = POWERS):
+    '''
+    Populates a list of powers to be swept through
+        Args:
+            powers (numpy array) : powers to be swept through
+    '''
     global POWERS
     POWERS = powers.tolist()
     
@@ -91,6 +102,11 @@ FREQUENCIES = np.append(np.arange(MIN_PUMP_FREQUENCY,
                                   PUMP_FREQUENCY_STEP), 
                         MAX_PUMP_FREQUENCY)
 def set_frequencies(frequencies = FREQUENCIES):
+    '''
+    Populates a list of frequencies to be swept through
+        Args:
+            frequencies (numpy array) : frequencies to be swept through
+    '''
     global FREQUENCIES
     FREQUENCIES = frequencies.tolist()
     
@@ -102,52 +118,84 @@ def set_frequencies(frequencies = FREQUENCIES):
 #Get data to normalize
 NORMALIZE_DATA = []
 #fp.create_dataset('freq_norm', data = NORMALIZE_DATA)
-def get_normalization_data():
+def get_normalization_data(index):
+    '''
+    Gets a data trace without the pump being on to use to normalize raw data
+    '''
     GEN.set_output_status(0)
     VNA.average(num_averages, wait)
     global NORMALIZE_DATA
-    NORMALIZE_DATA = VNA.gettrace()
+    NORMALIZE_DATA[index] = VNA.gettrace()[0]
     GEN.set_output_status(1)
 
 MEASURED_FREQUENCIES = []
 SWEEP_DATA = []
 def sweep_power_and_frequency():
+    '''
+    Runs the sweep over the powers and frequencies specified in the #Settings 
+    or set via set_frequencies/ set_powers.  The data is saved to SWEEP_DATA in 
+    the form [frequency_index][power_index][data]. The frequencies of the trace 
+    are saved to MEASURED_FREQUENCIES  
+    '''
     global FREQUENCIES
     global POWERS
     global MEASURED_FREQUENCIES
     MEASURED_FREQUENCIES = VNA.getfdata().tolist()
-    print type(MEASURED_FREQUENCIES)
+    num_tests = len(FREQUENCIES)*len(POWERS)
+    print('Number of tests = {}. Time per test = {} sec. Total time ~ {} min'
+                                .format(num_tests, wait, num_tests*wait/60))
     global SWEEP_DATA
-    SWEEP_DATA = np.empty((len(FREQUENCIES), len(POWERS), len(MEASURED_FREQUENCIES)))
+    SWEEP_DATA = np.empty((len(FREQUENCIES),
+                           len(POWERS),
+                            len(MEASURED_FREQUENCIES)))
+    global NORMALIZE_DATA
+    NORMALIZE_DATA = np.empty((len(FREQUENCIES), len(MEASURED_FREQUENCIES)))
     for fi in range(len(FREQUENCIES)): 
-        GEN.set_frequency(FREQUENCIES[fi])    
+        GEN.set_frequency(FREQUENCIES[fi])
+        get_normalization_data(fi)
         for pi in range(len(POWERS)):
             GEN.set_power(POWERS[pi])
-            #TODO get trace data
-            print ('Power = {}dBm, Frequency = {}GHz'.format(POWERS[pi]-20, FREQUENCIES[fi]/1e9))
+            print ('Power = {}dBm, Frequency = {}GHz, #{}/{}'
+                                .format(POWERS[pi]-20, FREQUENCIES[fi]/1e9, 
+                                        pi+fi*len(POWERS), num_tests))
             VNA.average(num_averages, wait)
             trace_data = VNA.gettrace()
             SWEEP_DATA[fi][pi] = trace_data[0]
     GEN.set_power(-20)
 def save_data_to_h5py(filename = None):
+    '''
+    Saves the most recent data to an h5py file.
+        Args:
+            filename (string) : the file to be saved to (note: must include the
+            path)
+            this will default to 
+            C:\Qtlab\gain_sweep_data\JPC_pump_sweep_{month}_{day}_{year}_{hour}
+            if no name is specified
+    '''
     if filename is None:
         h5py_filepath = 'C:\\Qtlab\\gain_sweep_data\\'
         now = dt.datetime.now()
-        date_time = '{month}_{day}_{year}_{hour}(1)'.format(month = now.month,
+        date_time = '{month}_{day}_{year}_{hour}'.format(month = now.month,
                                                         day = now.day,
                                                         year = now.year,
                                                         hour = now.hour)
         h5py_filename = 'JPC_pump_sweep_' + date_time #JPC_gain_ + date_time
         filename = h5py_filepath + h5py_filename
+    else:
+        filename = filename
     outfile = h5py.File(filename, 'w')
     outfile.create_dataset('pump_frequencies', data = FREQUENCIES)
     outfile.create_dataset('pump_powers', data = POWERS)
     #TODO change to normal data
     outfile.create_dataset('normal_data', data = NORMALIZE_DATA)
     outfile.create_dataset('sweep_data', data = SWEEP_DATA)
-    outfile.create_dataset('measure_freqeuncies', data = MEASURED_FREQUENCIES)        
+    outfile.create_dataset('measure_frequencies', data = MEASURED_FREQUENCIES)        
     outfile.close()
 def reset_instrument_state():
+    '''
+    Resets the instruments to their original states. To be used after the test
+    is run.
+    '''
     VNA.set_fstart(init_fstart)
     VNA.set_fstop(init_fstop)
     VNA.set_ifbw(init_ifbw)
@@ -155,12 +203,17 @@ def reset_instrument_state():
     VNA.set_electrical_delay(init_elec_delay)
     
 def run_sweep():
+    '''
+    Command to initial instruments, set parameters, run sweep, save data, etc.
+    This uses settings in #Settings or the most recent changes made by the set_
+    methods
+    '''
     get_instruments()
     store_instrument_parameters()
     set_instrument_parameters()
     set_powers()
     set_frequencies()
-    get_normalization_data()
+    #get_normalization_data()
     sweep_power_and_frequency()
     reset_instrument_state()
     save_data_to_h5py()

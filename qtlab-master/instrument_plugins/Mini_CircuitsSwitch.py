@@ -93,7 +93,38 @@ class Mini_CircuitsSwitch(Instrument):
         else:
             self.get('portvalue')
             
-
+    def set_mode(self, mode):
+        '''
+        Mode is the name you want to send to the switch, like for S_signal_signal should be S_ss
+        
+        '''
+        logging.info(__name__ + ' : Set the switch to measure %s' % mode)
+        '''
+        if mode == None:
+            mode = str(raw_input('Enter the mode name: (e.g S_ss) \n'))
+        else:
+            pass
+        '''
+        
+        if mode == 'S_ss':
+            self.set_switch('P','00010110')
+        elif mode == 'S_ii':
+            self.set_switch('P','01010010')
+        elif mode == 'S_pp':
+            self.set_switch('P','00001000')
+        elif mode == 'S_si':
+            self.set_switch('P','00010010')
+        elif mode == 'S_is':
+            self.set_switch('P','01010110')
+        elif mode == 'S_ip':
+            self.set_switch('P','01011000')
+        elif mode == 'S_pi':
+            self.set_swtich('P','00000010')
+        elif mode == 'S_ps':
+            self.set_switch('P','00000110')
+        elif mode == 'S_sp':
+            self.set_switch('P','00011000')
+            
         
     def do_get_portvalue(self):
         logging.debug(__name__+' : get portvalue')

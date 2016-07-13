@@ -16,9 +16,11 @@ class FluxPlotClass(object):
                  phases = None):
         if filename is not None:
             self.load_from_file(filename)
-        else:
+        elif (frequencies is not None and currents is not None and phases is not None):
             self.add_data_set(frequencies, currents, phases)
-        
+        else:
+            print('Data must be loaded or added before plot can be made')
+
     def load_from_file(self, 
                 h5py_filepath=
                 'C:\\Qtlab\\flux_sweep_data\\signal_sweep_7_6_2016_11_6'):
@@ -31,22 +33,22 @@ class FluxPlotClass(object):
         fp2 = h5py.File(h5py_filepath, 'r') 
         current_data = fp2['current_data']
         total_sweeps = len(current_data)
-        for i in range(total_sweeps):
-            freq=fp2['f_data'+str(i)] 
+        freq = np.empty((total_sweeps, 1601))
+        print type(freq)
+        freq=fp2['frequency_data'] 
         self.ar_freq = freq[:]
         self.ar_current_data = [float(i) for i in current_data[:]]
-        
         self.ar_phase = np.zeros([total_sweeps,len(freq)])
-        
-        for i in range(total_sweeps):
-            trace = fp2['trace_data'+str(i)][:]
-            self.ar_phase[i]=trace[0]
-        
+        trace = fp2['trace_data'][:]
+        self.ar_phase=trace        
         fp2.close()
-    def add_data_set(self, frequencies, currents, phases):
+        
+    def add_data_set(self, frequencies, currents, phases, dataname = 'Entered Data'):
         self.ar_freq = frequencies
         self.ar_current_data = currents
         self.ar_phase = np.array(phases)
+        self.filename = dataname
+            
     def plot_data(self):
         # color map setting
         levels=[180, 90, 0, -90, -180]
@@ -69,6 +71,8 @@ class FluxPlotClass(object):
                    origin = 'lower', cmap=_cmap, norm=_norm)
                   
         fig.colorbar(im).set_label('phase(degrees)')
+        if self.filename is None:
+            self.filename = 'Entered data'
         plt.title('Plot from %s' % self.filename.split('\\')[-1])
         
         # Y axis setup
@@ -86,7 +90,9 @@ class FluxPlotClass(object):
                             (self.ar_current_data[-1] - self.ar_current_data[0])/num_x_ticks)
         x_loc = [len(self.ar_current_data)/float(num_x_ticks)*i for i in range(num_x_ticks)]
         plt.xticks(x_loc, x_labels*1000, rotation=90)
+#        plt.xticks(x_loc, x_labels, rotation=90)
         plt.xlabel('Current (mA)')
+#       plt.xlabel('Time elapsed (minutes)')
         
         self.cursor = Cursor(ax, useblit=True, color ='white', linewidth = 1)
         def format_coord(x,y):
@@ -95,7 +101,7 @@ class FluxPlotClass(object):
             phase = self.ar_phase[int(x+.5)][int(y+.5)]
             return ('Current = {} mA, Frequency = {} GHz, Phase = {}'.format(current, frequency, phase))
         ax.format_coord = format_coord
-
         plt.show()
+        
     def get_data_point(self):
         return [self.ar_freq[0], self.ar_current_data[0], self.ar_phase[0][0]]

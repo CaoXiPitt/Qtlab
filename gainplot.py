@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import h5py
 import numpy as np
+import gainsweep as sweep
 
 class GainSweepPlot(object):
     def __init__(self, filename = None, frequencies = None, powers = None,
@@ -39,7 +40,11 @@ class GainSweepPlot(object):
             self.load_data_from_file(filename)
         else:
             self.add_data_set(frequencies, powers, gains, measurement_frequencies)
-
+    def plot_data_from_sweep(self, sweep):
+        self.add_data_set(frequencies = sweep.FREQUENCIES, powers = sweep.POWERS,
+                          gains = sweep.SWEEP_DATA-sweep.NORMALIZE_DATA[0],
+                          measurement_frequencies = sweep.MEASURED_FREQUENCIES)
+        self.plot_data()
     def plot_data(self):
         '''
         Sets up the plot window, adds sliders to the plot and displays it
@@ -83,7 +88,7 @@ class GainSweepPlot(object):
     def add_data_set(self, frequencies, powers, gains, measurement_frequencies):
         self.sweep_freqs = frequencies
         self.sweep_powers = powers
-        self.gains = gains
+        self.gain = gains
         self.measurement_frequency = measurement_frequencies
         
     def load_data_from_file(self, 
