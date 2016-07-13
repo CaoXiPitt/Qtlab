@@ -17,10 +17,10 @@ signal_gen_name = 'GEN'
 
 MIN_POWER = -40 #dBm total power
 MAX_POWER = -32 #dBm total power 
-POWER_STEP = 1 #dbm
+POWER_STEP = .2 #dbm
 MIN_PUMP_FREQUENCY = 15.022871e9 #Hz
 MAX_PUMP_FREQUENCY = 15.042871e9 #Hz
-PUMP_FREQUENCY_STEP = .005e9
+PUMP_FREQUENCY_STEP = .0025e9
 MIN_MEASURE_FREQUENCY = 8.7919e9 #Hz
 MAX_MEASURE_FREQUENCY = 8.8919e9 #Hz
 FREQUENCY_STEP = 1e9 #Hz
@@ -32,7 +32,7 @@ stop =MAX_MEASURE_FREQUENCY #Hz
 IF = 3e3 #Hz
 num_averages = 24 #Counts
 wait = .6*num_averages #seconds (.6*num_averages? [for IF=3e3])
-trform = 'MLOG'
+trform = 'PLOG' #'MLOG'
 ELECTRICAL_DELAY = 63e-9 #sec
 # End of Settings -------------------------------------------------------------     
 VNA = qt.instruments.get('VNA')
@@ -146,10 +146,10 @@ def sweep_power_and_frequency():
                                 .format(num_tests, wait, num_tests*wait/60))
     global SWEEP_DATA
     SWEEP_DATA = np.empty((len(FREQUENCIES),
-                           len(POWERS),
+                           len(POWERS), 2,   # added 2
                             len(MEASURED_FREQUENCIES)))
     global NORMALIZE_DATA
-    NORMALIZE_DATA = np.empty((len(FREQUENCIES), len(MEASURED_FREQUENCIES)))
+    NORMALIZE_DATA = np.empty((len(FREQUENCIES), 2, len(MEASURED_FREQUENCIES)))  #added 2
     for fi in range(len(FREQUENCIES)): 
         GEN.set_frequency(FREQUENCIES[fi])
         get_normalization_data(fi)
@@ -157,10 +157,10 @@ def sweep_power_and_frequency():
             GEN.set_power(POWERS[pi])
             print ('Power = {}dBm, Frequency = {}GHz, #{}/{}'
                                 .format(POWERS[pi]-20, FREQUENCIES[fi]/1e9, 
-                                        pi+fi*len(POWERS), num_tests))
+                                        pi+fi*len(POWERS)+1, num_tests))
             VNA.average(num_averages, wait)
             trace_data = VNA.gettrace()
-            SWEEP_DATA[fi][pi] = trace_data[0]
+            SWEEP_DATA[fi][pi] = trace_data #[0]
     GEN.set_power(-20)
 def save_data_to_h5py(filename):
     '''
@@ -172,8 +172,8 @@ def save_data_to_h5py(filename):
             C:\Qtlab\gain_sweep_data\JPC_pump_sweep_{month}_{day}_{year}_{hour}
             if no name is specified
     '''
-    if filename is None:
-        h5py_filepath = 'C:\\Qtlab\\gain_sweep_data\\'
+    h5py_filepath = 'C:\\Qtlab\\gain_sweep_data\\'
+    if filename is None: 
         now = dt.datetime.now()
         date_time = '{month}_{day}_{year}_{hour}:{minute}'.format(month = now.month,
                                                         day = now.day,
@@ -183,7 +183,7 @@ def save_data_to_h5py(filename):
         h5py_filename = 'JPC_pump_sweep_' + date_time
         filename = h5py_filepath + h5py_filename
     else:
-        filename = filename
+        filename = h5py_filepath + filename
     outfile = h5py.File(filename, 'w')
     outfile.create_dataset('pump_frequencies', data = FREQUENCIES)
     outfile.create_dataset('pump_powers', data = POWERS)
