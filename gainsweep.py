@@ -125,7 +125,7 @@ def get_normalization_data(index):
     GEN.set_output_status(0)
     VNA.average(num_averages, wait)
     global NORMALIZE_DATA
-    NORMALIZE_DATA[index] = VNA.gettrace()[0]
+    NORMALIZE_DATA[index] = VNA.gettrace()
     GEN.set_output_status(1)
 
 MEASURED_FREQUENCIES = []
