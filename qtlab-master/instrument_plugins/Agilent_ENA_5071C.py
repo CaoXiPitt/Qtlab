@@ -111,6 +111,7 @@ class Agilent_ENA_5071C(Instrument):
                            type=types.FloatType)
         self.add_parameter('phase_offset', flags = Instrument.FLAG_GETSET,
                            type=types.FloatType)
+        self.add_function('wait_test')
         self.add_function('reset')
         self.add_function('get_all')
         self.add_function('getfdata')
@@ -126,6 +127,11 @@ class Agilent_ENA_5071C(Instrument):
         else:
             self.get_all()
 
+    def wait_test(self):
+        self._visainstrument.write(':TRIG:SEQ:SING')
+        print self._visainstrument.ask('*OPC?')
+        time.sleep(10)
+        print self._viasinstrument.ask('*OPC?')
     def reset(self):
         '''
         Resets the instrument to default values

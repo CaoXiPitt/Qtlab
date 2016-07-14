@@ -51,7 +51,7 @@ config['scriptdirs'] = [
 ## For adding additional folders to the 'systm path'
 ## so python can find your modules
 #import sys
-#sys.path.append('d:/folder1')
+#sys.path.append('c:/Qtlab')
 #sys.path.append('d:/folder2')
 
 # Whether to start the GUI automatically
