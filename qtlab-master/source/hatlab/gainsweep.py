@@ -137,6 +137,8 @@ def sweep_power_and_frequency():
     the form [frequency_index][power_index][data]. The frequencies of the trace 
     are saved to MEASURED_FREQUENCIES  
     '''
+    #TODO update to make compatable with new h5py data format
+    
     global FREQUENCIES
     global POWERS
     global MEASURED_FREQUENCIES

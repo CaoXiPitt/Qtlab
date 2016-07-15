@@ -30,20 +30,20 @@ class FluxSweepPlot(object):
                 h5py_filepath (string) : the filepath and file name to be loaded
         '''
         self.filename = h5py_filepath
-        fp2 = h5py.File(h5py_filepath, 'r') 
-        current_data = fp2['current_data']
-        total_sweeps = len(current_data)
-        freq = np.empty((total_sweeps, 1601))
-        print type(freq)
-        freq=fp2['frequency_data'] 
-        self.ar_freq = freq[:]
-        self.ar_current_data = [float(i) for i in current_data[:]]
-        self.ar_phase = np.zeros([total_sweeps,len(freq)])
-        trace = fp2['sweep_data'][:]
-        self.ar_phase=trace        
+        fp2 = h5py.File(self.filename, 'r')
+        self.add_data_set(fp2['currents'][:],
+                          fp2['measure_frequencies'][:],
+                          fp2['sweep_data'][0:-1,1],
+                          dataname = self.filename.split('\\')[-1])        
         fp2.close()
-        
-    def add_data_set(self, frequencies, currents, phases, dataname = 'Entered Data'):
+    #TODO correct plot from sweep    
+    def plot_data_from_sweep(self, sweep):
+        self.add_data_set(sweep.CURRENTS, 
+                          sweep.MEASURE_BANDWIDTH, 
+                          sweep.PHASE_DATA)
+        self.plot_data()
+    #TODO correct plot from data set    
+    def add_data_set(self, currents, frequencies, phases, dataname = 'Entered Data'):
         self.ar_freq = frequencies
         self.ar_current_data = currents
         self.ar_phase = np.array(phases)
@@ -71,9 +71,7 @@ class FluxSweepPlot(object):
                    origin = 'lower', cmap=_cmap, norm=_norm)
                   
         fig.colorbar(im).set_label('phase(degrees)')
-        if self.filename is None:
-            self.filename = 'Entered data'
-        plt.title('Plot from %s' % self.filename.split('\\')[-1])
+        plt.title('Plot from ' + self.filename)
         
         # Y axis setup
         #TODO correct y axis for variable numbers of y values

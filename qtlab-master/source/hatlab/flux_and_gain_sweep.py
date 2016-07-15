@@ -19,10 +19,10 @@ MIN_POWER = -40 #dBm total power
 MAX_POWER = -32 #dBm total power
 MIN_POWER = MIN_POWER + 20 # factor in -20dB attenuator
 MAX_POWER = MAX_POWER + 20 # factor in -20dB attenuator 
-POWER_STEP = 1 #dbm
-MIN_PUMP_FREQUENCY = 15.022871e9 #Hz
-MAX_PUMP_FREQUENCY = 15.042871e9 #Hz
-PUMP_FREQUENCY_STEP = .005e9
+POWER_STEP = .2 #dbm
+MIN_PUMP_FREQUENCY = 15.030871e9 #Hz
+MAX_PUMP_FREQUENCY = 15.034871e9 #Hz
+PUMP_FREQUENCY_STEP = .0005e9
 MIN_MEASURE_FREQUENCY = 8.7919e9 #Hz
 MAX_MEASURE_FREQUENCY = 8.8919e9 #Hz
 FREQUENCY_STEP = 1e9 #Hz
@@ -39,7 +39,7 @@ AVG_TRIGGER = 1
 
 MIN_CURRENT = 0.24e-3 #Ampere
 MAX_CURRENT = 0.24e-3 #Ampere         1e-3  previous
-CURRENT_STEP = .05e-3 #Ampere    .0025e-3 previous
+CURRENT_STEP = .01e-3 #Ampere    .0025e-3 previous
 RAMP_RATE = .01 #Ampere/second
 YOKO_PROGRAM_FILE_NAME = 'fluxsweep.csv'
 
@@ -57,18 +57,6 @@ def get_instruments():
     global YOKO
     YOKO = qt.instruments.get(CS_NAME)
 # Previous state VNA
-#init_fstart = VNA.get_fstart()
-#init_fstop = VNA.get_fstop()
-#init_ifbw = VNA.get_ifbw()
-#init_trform = VNA.get_trform()
-#init_num_averages = VNA.get_avgnum()
-#init_elec_delay = VNA.get_electrical_delay()
-#init_phase_offset = VNA.get_phase_offset()
-##previous state GEN
-#init_frequency = GEN.get_frequency()
-#init_power = GEN.get_power()
-##previous state YOKO
-#init_ramp_time = YOKO.get_slope_interval()
 init_fstart = None
 init_fstop = None
 init_ifbw = None
@@ -166,15 +154,13 @@ def set_currents(currents = None):
     negative it will count from max_current down to min_current)
     '''
     global CURRENTS
-    print type(MAX_CURRENT)
     if currents is None:
         CURRENTS = np.append(np.arange(MIN_CURRENT, 
                                        MAX_CURRENT, 
                                        abs(CURRENT_STEP)),
                              MAX_CURRENT)
         if (CURRENT_STEP<0):
-            CURRENTS[::-1]
-        CURRENTS = np.arange(MIN_CURRENT, MIN_CURRENT+1, 3) 
+            CURRENTS[::-1] 
     else:
         CURRENTS = currents
         
@@ -184,8 +170,7 @@ def get_normalization_data(index):
     Gets a data trace without the pump being on to use to normalize raw data
     '''
     GEN.set_output_status(0)
-    VNA.wait_test(NUM_AVERAGES)
-    #VNA.average(NUM_AVERAGES, WAIT)
+    VNA.average(NUM_AVERAGES)
     global NORMALIZE_DATA
     NORMALIZE_DATA[index] = VNA.gettrace()
     GEN.set_output_status(1)
@@ -235,7 +220,7 @@ def sweep():
                                         power_index+freq_index*len(POWERS)+1, 
                                         num_tests))
                 #VNA.average(NUM_AVERAGES, WAIT)
-                VNA.wait_test(NUM_AVERAGES)
+                VNA.average(NUM_AVERAGES)
                 trace_data = VNA.gettrace()
                 SWEEP_DATA[current_index, freq_index, power_index] = trace_data 
     GEN.set_power(-20)
@@ -271,7 +256,7 @@ def save_data_to_h5py(filename):
     h5py_filepath = 'C:\\Qtlab\\gain_sweep_data\\'
     if filename is None: 
         now = dt.datetime.now()
-        date_time = '{month}_{day}_{year}_{hour}:{minute}'.format(month = now.month,
+        date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
                                                         day = now.day,
                                                         year = now.year,
                                                         hour = now.hour,

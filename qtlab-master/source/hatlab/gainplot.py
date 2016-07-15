@@ -42,7 +42,7 @@ class GainSweepPlot(object):
             self.add_data_set(frequencies, powers, gains, measurement_frequencies)
     def plot_data_from_sweep(self, sweep):
         self.gain = np.copy(sweep.SWEEP_DATA)
-        self.add_data_set(sweep.FREQUENCIES, sweep.POWERS, sweep.SWEEP_DATA,
+        self.add_data_set(sweep.CURRENTS,sweep.FREQUENCIES, sweep.POWERS, sweep.SWEEP_DATA,
                           sweep.MEASURE_BANDWIDTH, 
                           background = sweep.NORMALIZE_DATA)
         self.plot_data()
@@ -69,7 +69,7 @@ class GainSweepPlot(object):
         self.current_axes = plt.axes([0.2, 0.01, 0.65, 0.03])
         self.current_slider = Slider(self.current_axes, 'Power', min(self.currents),
                                    max(self.currents), 
-                            valinit=min(self.currents), valfmt = '%.4f A')
+                            valinit=min(self.currents), valfmt = '%.5f A')
         self.current_slider.on_changed(self.update)
         self.power_slider.on_changed(self.update)
         self.freq_slider.on_changed(self.update)
@@ -81,7 +81,6 @@ class GainSweepPlot(object):
             Input:
                 val : the value passed in from the slider
         '''
-        #TODO Update method to include flux sweep cursor
         sval = int(self.power_slider.val*10)/10.0
         fval = self.freq_slider.val
         cval = self.current_slider.val
@@ -93,8 +92,8 @@ class GainSweepPlot(object):
             self.power_slider.set_val(self.sweep_powers[pindex])
         if (self.freq_slider.val != self.sweep_freqs[findex]):
             self.freq_slider.set_val(self.sweep_freqs[findex])
-        if (self.current_slider.val != self.currents[findex]):
-            self.current_slider.set_val(self.currents[findex])
+        if (self.current_slider.val != self.currents[cindex]):
+            self.current_slider.set_val(self.currents[cindex])
         
     def add_data_set(self, currents, frequencies, powers, gains, measurement_frequencies, background = None):
         '''

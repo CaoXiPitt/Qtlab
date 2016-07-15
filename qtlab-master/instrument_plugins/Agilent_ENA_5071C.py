@@ -1,5 +1,6 @@
 # MJH 2015_10_15.. Maybe this will work??
 #Additions by Alex
+#average method redone by Erick Brindock  7/15/16
 from instrument import Instrument
 import visa
 import types
@@ -113,7 +114,6 @@ class Agilent_ENA_5071C(Instrument):
                            type=types.FloatType)
         self.add_function('send')
         self.add_function('receive')
-        self.add_function('wait_test')
         self.add_function('reset')
         self.add_function('get_all')
         self.add_function('getfdata')
@@ -133,8 +133,13 @@ class Agilent_ENA_5071C(Instrument):
         self._visainstrument.write(command)
     def receive(self, command):
         return self._visainstrument.ask(command)
-    def wait_test(self, number):
-        #:TRIG:SOUR BUS;:TRIG:SEQ:AVER ON;
+    def average(self, number):
+        '''
+        Sets the number of averages taken and waits until the averaging is done
+        (Note: Trigger source must be set to bus)
+        '''
+        # disable warning beep for the unterminated Query waring if the 
+        #exception is raised
         self._visainstrument.write(':SYST:BEEP:WARN:STAT off')
         self.set_avgnum(number)
         self._visainstrument.write(':TRIG:SING')
@@ -231,16 +236,6 @@ class Agilent_ENA_5071C(Instrument):
                 offset (float) : the phase offset in degrees
         '''
         self._visainstrument.write(':CALC1:CORR:OFFS:PHAS %s' % offset)
-    def average(self, number, time_to_wait):
-        '''
-        
-        '''
-        self.set_avgnum(number)
-        self.set_avgstat(0)
-        self.set_avgstat(1)
-        self.wait(time_to_wait)
-        print("Done")
-        return
         
     def continuous_trigger_toggle(self, ch=1):
         '''
