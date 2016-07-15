@@ -151,6 +151,8 @@ class GainSweepPlot(object):
         infile = h5py.File(filename, 'r')
         self.sweep_freqs = np.array(infile['pump_frequencies'])
         self.sweep_powers = np.array(infile['pump_powers'])
+        
+        self.currents = np.array(infile['currents'])
 #        for i in range(len(self.sweep_powers)):  # Remove floating point error
 #            self.sweep_powers[i] = int(self.sweep_powers[i]*10)/10.0
         self.gain = np.array(infile['sweep_data'])
@@ -161,7 +163,7 @@ class GainSweepPlot(object):
         else:
             print type(self)
             self.unpumped_data = np.array(infile['normal_data'])
-            self.add_data_set(self.sweep_freqs, self.sweep_powers, self.gain,
+            self.add_data_set(self.currents, self.sweep_freqs, self.sweep_powers, self.gain,
                                 self.measurement_frequency, 
                                 background = self.unpumped_data)
         infile.close()
