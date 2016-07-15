@@ -19,10 +19,10 @@ MIN_POWER = -40 #dBm total power
 MAX_POWER = -32 #dBm total power
 MIN_POWER = MIN_POWER + 20 # factor in -20dB attenuator
 MAX_POWER = MAX_POWER + 20 # factor in -20dB attenuator 
-POWER_STEP = .2 #dbm
+POWER_STEP = 1 #dbm
 MIN_PUMP_FREQUENCY = 15.022871e9 #Hz
 MAX_PUMP_FREQUENCY = 15.042871e9 #Hz
-PUMP_FREQUENCY_STEP = .0025e9
+PUMP_FREQUENCY_STEP = .005e9
 MIN_MEASURE_FREQUENCY = 8.7919e9 #Hz
 MAX_MEASURE_FREQUENCY = 8.8919e9 #Hz
 FREQUENCY_STEP = 1e9 #Hz
@@ -35,8 +35,8 @@ WAIT = .6*NUM_AVERAGES #seconds (.6*num_averages? [for IF=3e3])
 TRFORM = 'PLOG' #'MLOG'
 ELECTRICAL_DELAY = 63e-9 #sec
 
-MIN_CURRENT = 0.1e-3 #Ampere
-MAX_CURRENT = .2e-3 #Ampere         1e-3  previous
+MIN_CURRENT = 0.24e-3 #Ampere
+MAX_CURRENT = 0.24e-3 #Ampere         1e-3  previous
 CURRENT_STEP = .05e-3 #Ampere    .0025e-3 previous
 RAMP_RATE = .01 #Ampere/second
 YOKO_PROGRAM_FILE_NAME = 'fluxsweep.csv'
@@ -155,14 +155,17 @@ def set_currents(currents = None):
     Creates a list of currents to sweep through. (Note: if current_step is 
     negative it will count from max_current down to min_current)
     '''
+    #TODO correct method to utilize signle values properly. Must be done for all set_ functions I think
     global CURRENTS
+    print type(MAX_CURRENT)
     if currents is None:
-        CURRENTS = np.append(np.arange(MIN_CURRENT, 
-                                       MAX_CURRENT, 
-                                       abs(CURRENT_STEP),
-                             MAX_CURRENT))
-        if (CURRENT_STEP>0):
-            CURRENTS[::-1]
+#        CURRENTS = np.append(np.arange(MIN_CURRENT, 
+#                                       MAX_CURRENT, 
+#                                       abs(CURRENT_STEP),
+#                             MAX_CURRENT))
+#        if (CURRENT_STEP<0):
+#            CURRENTS[::-1]
+        CURRENTS = np.arange(MIN_CURRENT, MIN_CURRENT+1, 3) 
     else:
         CURRENTS = currents
         

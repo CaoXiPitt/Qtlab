@@ -6,7 +6,7 @@ import types
 import logging
 import numpy as np
 import time
-
+from pyvisa.visa_exceptions import VisaIOError
 triggered=[False]*159 
 
 class Agilent_ENA_5071C(Instrument):
@@ -111,6 +111,8 @@ class Agilent_ENA_5071C(Instrument):
                            type=types.FloatType)
         self.add_parameter('phase_offset', flags = Instrument.FLAG_GETSET,
                            type=types.FloatType)
+        self.add_function('send')
+        self.add_function('receive')
         self.add_function('wait_test')
         self.add_function('reset')
         self.add_function('get_all')
@@ -127,11 +129,22 @@ class Agilent_ENA_5071C(Instrument):
         else:
             self.get_all()
 
-    def wait_test(self):
-        self._visainstrument.write(':TRIG:SEQ:SING')
-        print self._visainstrument.ask('*OPC?')
-        time.sleep(10)
-        print self._viasinstrument.ask('*OPC?')
+    def send(self, command):
+        self._visainstrument.write(command)
+    def receive(self, command):
+        return self._visainstrument.ask(command)
+    def wait_test(self, number):
+        self._visainstrument.write(':TRIG:SOUR BUS;:TRIG:SEQ:AVER ON;:SYST:BEEP:WARN:STAT off')
+        self.set_avgnum(number)
+        self._visainstrument.write(':TRIG:SING')
+        testing = 0
+        while testing == 0:
+            try:
+                testing = int(self._visainstrument.ask('*OPC?'))
+            except VisaIOError:
+                testing = 0
+        self._visainstrument.write('SYST:BEEP:WARN:STAT on')
+        print 'Test completed'
     def reset(self):
         '''
         Resets the instrument to default values

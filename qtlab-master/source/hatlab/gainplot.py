@@ -41,16 +41,17 @@ class GainSweepPlot(object):
         elif (frequencies is not None and powers is not None and gains is not None and measurement_frequencies is not None):
             self.add_data_set(frequencies, powers, gains, measurement_frequencies)
     def plot_data_from_sweep(self, sweep):
+        self.gain = np.copy(sweep.SWEEP_DATA)
         self.add_data_set(sweep.FREQUENCIES, sweep.POWERS, sweep.SWEEP_DATA,
-                          sweep.MEASURED_FREQUENCIES, 
-                          background = sweep.NORMALIZATION_DATA)
+                          sweep.MEASURE_BANDWIDTH, 
+                          background = sweep.NORMALIZE_DATA)
         self.plot_data()
     def plot_data(self):
         '''
         Sets up the plot window, adds sliders to the plot and displays it
         '''
         # Main Data Plot Setup
-        self.data_plot, = plt.plot(self.measurement_frequency, self.gain[0,0,0])  #added another 0
+        self.data_plot, = plt.plot(self.measurement_frequency, self.gain[0,0,0,0])  #added another 0
         plt.axis([self.measurement_frequency[0], self.measurement_frequency[-1], -5, 35])
         plt.gcf().subplots_adjust(left = .05, right = .95,top = .95, bottom = .15)
         plt.title('Power and Frequency Sweep')
@@ -75,11 +76,12 @@ class GainSweepPlot(object):
             Input:
                 val : the value passed in from the slider
         '''
+        #TODO Update method to include flux sweep cursor
         sval = int(self.power_slider.val*10)/10.0
         fval = self.freq_slider.val
         findex = self.sweep_freqs.index(min(self.sweep_freqs, key=lambda x:abs(x-fval)))
         pindex = self.sweep_powers.index(min(self.sweep_powers, key=lambda x:abs(x-sval)))    
-        self.data_plot.set_ydata(self.gain[findex][pindex][0])
+        self.data_plot.set_ydata(self.gain[0][findex][pindex][0])
         if (self.power_slider.val != self.sweep_powers[pindex]):
             self.power_slider.set_val(self.sweep_powers[pindex])
         if (self.freq_slider.val != self.sweep_freqs[findex]):
