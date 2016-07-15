@@ -134,7 +134,8 @@ class Agilent_ENA_5071C(Instrument):
     def receive(self, command):
         return self._visainstrument.ask(command)
     def wait_test(self, number):
-        self._visainstrument.write(':TRIG:SOUR BUS;:TRIG:SEQ:AVER ON;:SYST:BEEP:WARN:STAT off')
+        #:TRIG:SOUR BUS;:TRIG:SEQ:AVER ON;
+        self._visainstrument.write(':SYST:BEEP:WARN:STAT off')
         self.set_avgnum(number)
         self._visainstrument.write(':TRIG:SING')
         testing = 0
@@ -144,7 +145,7 @@ class Agilent_ENA_5071C(Instrument):
             except VisaIOError:
                 testing = 0
         self._visainstrument.write('SYST:BEEP:WARN:STAT on')
-        print 'Test completed'
+        print 'Averaging completed'
     def reset(self):
         '''
         Resets the instrument to default values

@@ -58,14 +58,19 @@ class GainSweepPlot(object):
         plt.xlabel('Frequency (Ghz)')
         plt.ylabel('Gain (dB)')
         # Slider Setup
-        self.freq_axes = plt.axes([0.2, 0.01, 0.65, 0.03])
+        self.freq_axes = plt.axes([0.2, 0.05, 0.65, 0.03])
         self.freq_slider = Slider(self.freq_axes, 'Frequency', 
                                   min(self.sweep_freqs), max(self.sweep_freqs),
                              valinit=min(self.sweep_freqs), valfmt = '%.0f Hz')
-        self.power_axes = plt.axes([0.2, 0.05, 0.65, 0.03])
+        self.power_axes = plt.axes([0.2, 0.09, 0.65, 0.03])
         self.power_slider = Slider(self.power_axes, 'Power', min(self.sweep_powers),
                                    max(self.sweep_powers), 
                             valinit=min(self.sweep_powers), valfmt = '%.1f dBm')
+        self.current_axes = plt.axes([0.2, 0.01, 0.65, 0.03])
+        self.current_slider = Slider(self.current_axes, 'Power', min(self.currents),
+                                   max(self.currents), 
+                            valinit=min(self.currents), valfmt = '%.4f A')
+        self.current_slider.on_changed(self.update)
         self.power_slider.on_changed(self.update)
         self.freq_slider.on_changed(self.update)
         plt.show()
@@ -79,15 +84,19 @@ class GainSweepPlot(object):
         #TODO Update method to include flux sweep cursor
         sval = int(self.power_slider.val*10)/10.0
         fval = self.freq_slider.val
+        cval = self.current_slider.val
         findex = self.sweep_freqs.index(min(self.sweep_freqs, key=lambda x:abs(x-fval)))
-        pindex = self.sweep_powers.index(min(self.sweep_powers, key=lambda x:abs(x-sval)))    
-        self.data_plot.set_ydata(self.gain[0][findex][pindex][0])
+        pindex = self.sweep_powers.index(min(self.sweep_powers, key=lambda x:abs(x-sval)))
+        cindex = self.currents.index(min(self.currents, key=lambda x:abs(x-cval)))
+        self.data_plot.set_ydata(self.gain[cindex][findex][pindex][0])
         if (self.power_slider.val != self.sweep_powers[pindex]):
             self.power_slider.set_val(self.sweep_powers[pindex])
         if (self.freq_slider.val != self.sweep_freqs[findex]):
             self.freq_slider.set_val(self.sweep_freqs[findex])
-            
-    def add_data_set(self, frequencies, powers, gains, measurement_frequencies, background = None):
+        if (self.current_slider.val != self.currents[findex]):
+            self.current_slider.set_val(self.currents[findex])
+        
+    def add_data_set(self, currents, frequencies, powers, gains, measurement_frequencies, background = None):
         '''
         Adds data to be used to make a plot. If optional background arguemnt is
         included, it will be used to normalize the data contained in the gains 
@@ -104,6 +113,7 @@ class GainSweepPlot(object):
                 background (numpy.2darray) : 
                 the background noise used to normalize the gains
         '''
+        self.currents = currents.tolist()
         self.sweep_freqs = frequencies.tolist()
         self.sweep_powers = powers.tolist()
         if background is None:
@@ -124,6 +134,7 @@ class GainSweepPlot(object):
                 name courtesy of Edan Benjamin Alpern
         '''
         print 'normalizing data'
+        #TODO corret normalization for new data structure
         for i in range(self.gain.shape[0]):
             self.gain[i] = self.gain[i]- background[i]
     def load_data_from_file(self, filename, normalized = False):

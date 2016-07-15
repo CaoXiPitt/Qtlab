@@ -39,7 +39,7 @@ class FluxSweepPlot(object):
         self.ar_freq = freq[:]
         self.ar_current_data = [float(i) for i in current_data[:]]
         self.ar_phase = np.zeros([total_sweeps,len(freq)])
-        trace = fp2['trace_data'][:]
+        trace = fp2['sweep_data'][:]
         self.ar_phase=trace        
         fp2.close()
         

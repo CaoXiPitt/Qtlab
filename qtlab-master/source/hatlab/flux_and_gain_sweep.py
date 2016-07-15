@@ -34,6 +34,8 @@ NUM_AVERAGES = 24 #Counts
 WAIT = .6*NUM_AVERAGES #seconds (.6*num_averages? [for IF=3e3])
 TRFORM = 'PLOG' #'MLOG'
 ELECTRICAL_DELAY = 63e-9 #sec
+TRIGGER_SOURCE = 'BUS'
+AVG_TRIGGER = 1
 
 MIN_CURRENT = 0.24e-3 #Ampere
 MAX_CURRENT = 0.24e-3 #Ampere         1e-3  previous
@@ -74,6 +76,8 @@ init_trform = None
 init_num_averages = None
 init_elec_delay = None
 init_phase_offset = None
+init_trigger_source = None
+init_avg_trigger = None
 #previous state GEN
 init_frequency = None
 init_power = None
@@ -97,6 +101,10 @@ def store_instrument_parameters():
     init_elec_delay = VNA.get_electrical_delay()
     global init_phase_offset
     init_phase_offset = VNA.get_phase_offset()
+    global init_trigger_source
+    init_trigger_source = VNA.get_trigger_source()
+    global init_avg_trigger
+    init_avg_trigger = VNA.get_avg_trigger()
     global init_frequency
     init_frequency = GEN.get_frequency()
     global init_power
@@ -116,6 +124,8 @@ def set_instrument_parameters():
     VNA.set_trform(TRFORM)
     VNA.set_electrical_delay(ELECTRICAL_DELAY)    
     VNA.set_phase_offset(PHASE_OFFSET)
+    VNA.set_trigger_source(TRIGGER_SOURCE)
+    VNA.set_avg_trigger(AVG_TRIGGER)
     # Set parameters YOKO
     global RAMP_TIME
     RAMP_TIME = YOKO.set_ramp_intervals(step = CURRENT_STEP, rate = RAMP_RATE)
@@ -155,16 +165,15 @@ def set_currents(currents = None):
     Creates a list of currents to sweep through. (Note: if current_step is 
     negative it will count from max_current down to min_current)
     '''
-    #TODO correct method to utilize signle values properly. Must be done for all set_ functions I think
     global CURRENTS
     print type(MAX_CURRENT)
     if currents is None:
-#        CURRENTS = np.append(np.arange(MIN_CURRENT, 
-#                                       MAX_CURRENT, 
-#                                       abs(CURRENT_STEP),
-#                             MAX_CURRENT))
-#        if (CURRENT_STEP<0):
-#            CURRENTS[::-1]
+        CURRENTS = np.append(np.arange(MIN_CURRENT, 
+                                       MAX_CURRENT, 
+                                       abs(CURRENT_STEP)),
+                             MAX_CURRENT)
+        if (CURRENT_STEP<0):
+            CURRENTS[::-1]
         CURRENTS = np.arange(MIN_CURRENT, MIN_CURRENT+1, 3) 
     else:
         CURRENTS = currents
@@ -175,7 +184,8 @@ def get_normalization_data(index):
     Gets a data trace without the pump being on to use to normalize raw data
     '''
     GEN.set_output_status(0)
-    VNA.average(NUM_AVERAGES, WAIT)
+    VNA.wait_test(NUM_AVERAGES)
+    #VNA.average(NUM_AVERAGES, WAIT)
     global NORMALIZE_DATA
     NORMALIZE_DATA[index] = VNA.gettrace()
     GEN.set_output_status(1)
@@ -224,7 +234,8 @@ def sweep():
                                         FREQUENCIES[freq_index]/1e9, 
                                         power_index+freq_index*len(POWERS)+1, 
                                         num_tests))
-                VNA.average(NUM_AVERAGES, WAIT)
+                #VNA.average(NUM_AVERAGES, WAIT)
+                VNA.wait_test(NUM_AVERAGES)
                 trace_data = VNA.gettrace()
                 SWEEP_DATA[current_index, freq_index, power_index] = trace_data 
     GEN.set_power(-20)
@@ -241,6 +252,8 @@ def reset_instrument_state():
     VNA.set_electrical_delay(init_elec_delay)
     VNA.set_avgnum(init_num_averages)
     VNA.set_phase_offset(init_phase_offset)
+    VNA.set_trigger_source(init_trigger_source)
+    VNA.set_avg_trigger(init_avg_trigger)
     GEN.set_frequency(init_frequency)
     GEN.set_power(init_power)
     YOKO.set_slope_interval(init_ramp_time)    
@@ -268,6 +281,7 @@ def save_data_to_h5py(filename):
     else:
         filename = h5py_filepath + filename
     outfile = h5py.File(filename, 'w')
+    print "Saving data to %s" %filename
     outfile.create_dataset('pump_frequencies', data = FREQUENCIES)
     outfile.create_dataset('pump_powers', data = POWERS)
     outfile.create_dataset('currents' , data = CURRENTS)
