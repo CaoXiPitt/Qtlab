@@ -134,8 +134,8 @@ class GainSweepPlot(object):
         '''
         print 'normalizing data'
         #TODO corret normalization for new data structure
-        for i in range(self.gain.shape[0]):
-            self.gain[i] = self.gain[i]- background[i]
+        for i in range(self.gain.shape[1]):
+            self.gain[0,i] = self.gain[0,i]- background[i]
     def load_data_from_file(self, filename, normalized = False):
         '''
         Loads data from an h5py file to be plotted
