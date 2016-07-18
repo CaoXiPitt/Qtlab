@@ -20,7 +20,15 @@ class FluxSweepPlot(object):
             self.add_data_set(frequencies, currents, phases)
         else:
             print('Data must be loaded or added before plot can be made')
-
+    def get_resonant_freq(self, current):
+        index = np.where(np.absolute(self.ar_current_data - current) < .1e-9)
+        print 'current index = %s' %index
+        print self.ar_phase[index,1]
+        abs_phase = np.absolute(self.ar_phase)
+        abs_min = np.amin(abs_phase[index])
+        res_freq_index = np.where(abs_phase == abs_min)[1][0]
+        print res_freq_index
+        return self.ar_freq[res_freq_index]
     def load_from_file(self, 
                 h5py_filepath=
                 'C:\\Qtlab\\flux_sweep_data\\signal_sweep_7_6_2016_11_6'):
@@ -33,14 +41,14 @@ class FluxSweepPlot(object):
         fp2 = h5py.File(self.filename, 'r')
         self.add_data_set(fp2['currents'][:],
                           fp2['measure_frequencies'][:],
-                          fp2['sweep_data'][0:-1,1],
+                          fp2['sweep_data'][:,1],
                           dataname = self.filename.split('\\')[-1])        
         fp2.close()
     #TODO correct plot from sweep    
     def plot_data_from_sweep(self, sweep):
         self.add_data_set(sweep.CURRENTS, 
                           sweep.MEASURE_BANDWIDTH, 
-                          sweep.PHASE_DATA)
+                          sweep.PHASE_DATA[:,1])
         self.plot_data()
     #TODO correct plot from data set    
     def add_data_set(self, currents, frequencies, phases, dataname = 'Entered Data'):
@@ -83,8 +91,10 @@ class FluxSweepPlot(object):
         # X axis setup
         num_x_ticks = 20
         if len(self.ar_current_data) < num_x_ticks:
-            num_x_ticks = 1
-        x_labels = np.arange(self.ar_current_data[0], self.ar_current_data[-1], 
+            num_x_ticks = len(self.ar_current_data)
+            x_labels = self.ar_current_data
+        else:
+            x_labels = np.arange(self.ar_current_data[0], self.ar_current_data[-1], 
                             (self.ar_current_data[-1] - self.ar_current_data[0])/num_x_ticks)
         x_loc = [len(self.ar_current_data)/float(num_x_ticks)*i for i in range(num_x_ticks)]
         plt.xticks(x_loc, x_labels*1000, rotation=90)

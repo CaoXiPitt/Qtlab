@@ -129,7 +129,8 @@ def sweep_current():
         VNA.average(NUM_AVERAGES)
         PHASE_DATA[i] = VNA.gettrace()
         i+=1
-        print 'test {}'.format(i)
+        print 'Test {}. Resonant frequency = {}'.format(i, get_resonant_frequency(current))
+        
 
 def save_data_to_h5py(filename = None):
     if filename is None:
@@ -170,6 +171,14 @@ def run_sweep(sweep_currents = None):
                                   currents = CURRENTS,
                                   phases = PHASE_DATA)
     plot.plot_data()
-    
+def get_resonant_frequency(current):
+        index = np.where(np.absolute(CURRENTS - current) < .1e-9)
+        print 'current index = %s' %index
+        print PHASE_DATA[index,1]
+        abs_phase = np.absolute(PHASE_DATA)
+        abs_min = np.amin(PHASE_DATA[index])
+        res_freq_index = np.where(abs_phase == abs_min)[1][0]
+        print res_freq_index
+        return MEASURE_BANDWIDTH[res_freq_index]
 if __name__ == '__main__':
     run_sweep()        

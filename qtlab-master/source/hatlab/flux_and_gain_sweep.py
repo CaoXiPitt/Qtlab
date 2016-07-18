@@ -9,6 +9,7 @@ import time
 import datetime as dt
 import h5py
 import numpy as np
+import fluxsweep
 
 # Settings --------------------------------------------------------------------
 VNA_NAME = 'VNA'
@@ -179,7 +180,7 @@ MEASURE_BANDWIDTH = None
 def get_measurement_bandwidth():
     global MEASURE_BANDWIDTH
     MEASURE_BANDWIDTH = VNA.getfdata()
-
+ 
 SWEEP_DATA = None    
 def sweep():
     '''
