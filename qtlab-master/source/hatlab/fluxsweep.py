@@ -158,27 +158,25 @@ def reset_instrument_state():
     VNA.set_phase_offset(init_phase_offset)
     YOKO.set_slope_interval(old_ramp_time)
 
-def run_sweep(sweep_currents = None):
+def run_sweep(sweep_currents = None, save_data = True):
     get_instruments()
     store_instrument_parameters()
     set_instrument_parameters()
     set_currents(sweep_currents)
-    sweep_current()
     ask_frequency_data()
+    sweep_current()
     reset_instrument_state()
-    save_data_to_h5py()
-    plot = fluxplot.FluxSweepPlot(frequencies = MEASURE_BANDWIDTH,
-                                  currents = CURRENTS,
-                                  phases = PHASE_DATA)
-    plot.plot_data()
+    if save_data:
+        save_data_to_h5py()
+#    plot = fluxplot.FluxSweepPlot(frequencies = MEASURE_BANDWIDTH,
+#                                  currents = CURRENTS,
+#                                  phases = PHASE_DATA)
+#    plot.plot_data()
 def get_resonant_frequency(current):
         index = np.where(np.absolute(CURRENTS - current) < .1e-9)
-        print 'current index = %s' %index
-        print PHASE_DATA[index,1]
         abs_phase = np.absolute(PHASE_DATA)
-        abs_min = np.amin(PHASE_DATA[index])
-        res_freq_index = np.where(abs_phase == abs_min)[1][0]
-        print res_freq_index
+        abs_min = np.amin(abs_phase[index])
+        res_freq_index = np.where(abs_phase == abs_min)[2][0]
         return MEASURE_BANDWIDTH[res_freq_index]
 if __name__ == '__main__':
-    run_sweep()        
+    run_sweep(save_data = True)        

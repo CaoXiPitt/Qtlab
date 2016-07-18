@@ -20,10 +20,10 @@ MIN_POWER = -40 #dBm total power
 MAX_POWER = -32 #dBm total power
 MIN_POWER = MIN_POWER + 20 # factor in -20dB attenuator
 MAX_POWER = MAX_POWER + 20 # factor in -20dB attenuator 
-POWER_STEP = .2 #dbm
-MIN_PUMP_FREQUENCY = 15.030871e9 #Hz
-MAX_PUMP_FREQUENCY = 15.034871e9 #Hz
-PUMP_FREQUENCY_STEP = .0005e9
+POWER_STEP = 4 #dbm
+MIN_PUMP_FREQUENCY = 15.0300871e9 #Hz
+MAX_PUMP_FREQUENCY = 15.0340871e9 #Hz
+PUMP_FREQUENCY_STEP = .002e9
 MIN_MEASURE_FREQUENCY = 8.7919e9 #Hz
 MAX_MEASURE_FREQUENCY = 8.8919e9 #Hz
 FREQUENCY_STEP = 1e9 #Hz
@@ -38,9 +38,9 @@ ELECTRICAL_DELAY = 63e-9 #sec
 TRIGGER_SOURCE = 'BUS'
 AVG_TRIGGER = 1
 
-MIN_CURRENT = 0.24e-3 #Ampere
+MIN_CURRENT = 0.239e-3 #Ampere
 MAX_CURRENT = 0.24e-3 #Ampere         1e-3  previous
-CURRENT_STEP = .01e-3 #Ampere    .0025e-3 previous
+CURRENT_STEP = .001e-3 #Ampere    .0025e-3 previous
 RAMP_RATE = .01 #Ampere/second
 YOKO_PROGRAM_FILE_NAME = 'fluxsweep.csv'
 
@@ -192,7 +192,9 @@ def sweep():
 #    global FREQUENCIES
 #    global POWERS
 #    global MEASURED_FREQUENCIES
-    get_measurement_bandwidth()
+    #get_measurement_bandwidth()
+    global MEASURE_BANDWIDTH 
+    MEASURE_BANDWIDTH = np.empty((len(CURRENTS), 1601))
     num_tests = len(FREQUENCIES)*len(POWERS)
     print('Number of tests = {}. Time per test = {} sec. Total time ~ {} min'
                                 .format(num_tests, WAIT, num_tests*WAIT/60))
@@ -201,18 +203,24 @@ def sweep():
                            len(FREQUENCIES),
                            len(POWERS), 
                            2,   # added 2
-                           len(MEASURE_BANDWIDTH)))
+                           len(MEASURE_BANDWIDTH[1])))
     global NORMALIZE_DATA
-    NORMALIZE_DATA = np.empty((len(FREQUENCIES), 2, len(MEASURE_BANDWIDTH)))    
+    NORMALIZE_DATA = np.empty((len(CURRENTS), 2, len(MEASURE_BANDWIDTH[1])))    
     if (YOKO.get_output_level() != CURRENTS[0]): 
         # Change current to starting currents
         time.sleep(YOKO.change_current(CURRENTS[0]))
     for current_index in range(len(CURRENTS)):
-        YOKO.change_current(CURRENTS[current_index])
-        time.sleep(RAMP_TIME)    #wait for current to reach new value
+#        YOKO.change_current(CURRENTS[current_index])
+#        time.sleep(RAMP_TIME)    #wait for current to reach new value
+        print 'Performing fluxsweep'
+        fluxsweep.run_sweep([CURRENTS[current_index]], save_data = False)
+        mid_point = fluxsweep.get_resonant_frequency(CURRENTS[current_index])
+        VNA.set_fcenter(mid_point)
+        MEASURE_BANDWIDTH[current_index] = VNA.getfdata()
+        print 'Getting Normalization Data'
+        get_normalization_data(current_index)
         for freq_index in range(len(FREQUENCIES)): 
             GEN.set_frequency(FREQUENCIES[freq_index])
-            get_normalization_data(freq_index)
             for power_index in range(len(POWERS)):
                 GEN.set_power(POWERS[power_index])
                 print ('Power = {}dBm, Frequency = {}GHz, #{}/{}'
@@ -269,9 +277,13 @@ def save_data_to_h5py(filename):
     outfile = h5py.File(filename, 'w')
     print "Saving data to %s" %filename
     outfile.create_dataset('pump_frequencies', data = FREQUENCIES)
+    print FREQUENCIES
     outfile.create_dataset('pump_powers', data = POWERS)
+    print POWERS
     outfile.create_dataset('currents' , data = CURRENTS)
+    print CURRENTS
     outfile.create_dataset('normal_data', data = NORMALIZE_DATA)
+    print NORMALIZE_DATA.shape
     outfile.create_dataset('sweep_data', data = SWEEP_DATA)
     outfile.create_dataset('measure_frequencies', data = MEASURE_BANDWIDTH)        
     outfile.close()    

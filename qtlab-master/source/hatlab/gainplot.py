@@ -51,9 +51,11 @@ class GainSweepPlot(object):
         Sets up the plot window, adds sliders to the plot and displays it
         '''
         # Main Data Plot Setup
-        self.data_plot, = plt.plot(self.measurement_frequency, self.gain[0,0,0,0])  #added another 0
-        plt.axis([self.measurement_frequency[0], self.measurement_frequency[-1], -5, 35])
+        self.data_plot, = plt.plot(self.measurement_frequency[0], self.gain[0,0,0,0])  #added another 0
+        plt.axis([self.measurement_frequency[0,0], self.measurement_frequency[0,-1], -5, 35])
         plt.gcf().subplots_adjust(left = .05, right = .95,top = .95, bottom = .15)
+        self.axes = plt.gca()
+        self.axes.set_xlim(self.measurement_frequency[0,0], self.measurement_frequency[0,-1])
         plt.title('Power and Frequency Sweep')
         plt.xlabel('Frequency (Ghz)')
         plt.ylabel('Gain (dB)')
@@ -69,7 +71,7 @@ class GainSweepPlot(object):
         self.current_axes = plt.axes([0.2, 0.01, 0.65, 0.03])
         self.current_slider = Slider(self.current_axes, 'Power', min(self.currents),
                                    max(self.currents), 
-                            valinit=min(self.currents), valfmt = '%.5f A')
+                            valinit=min(self.currents), valfmt = '%.7f A')
         self.current_slider.on_changed(self.update)
         self.power_slider.on_changed(self.update)
         self.freq_slider.on_changed(self.update)
@@ -88,6 +90,8 @@ class GainSweepPlot(object):
         pindex = self.sweep_powers.index(min(self.sweep_powers, key=lambda x:abs(x-sval)))
         cindex = self.currents.index(min(self.currents, key=lambda x:abs(x-cval)))
         self.data_plot.set_ydata(self.gain[cindex][findex][pindex][0])
+        self.data_plot.set_xdata(self.measurement_frequency[cindex])
+        self.axes.set_xlim(self.measurement_frequency[cindex,0], self.measurement_frequency[cindex,-1])
         if (self.power_slider.val != self.sweep_powers[pindex]):
             self.power_slider.set_val(self.sweep_powers[pindex])
         if (self.freq_slider.val != self.sweep_freqs[findex]):
@@ -134,8 +138,8 @@ class GainSweepPlot(object):
         '''
         print 'normalizing data'
         #TODO corret normalization for new data structure
-        for i in range(self.gain.shape[1]):
-            self.gain[0,i] = self.gain[0,i]- background[i]
+        for i in range(self.gain.shape[0]):
+            self.gain[i] = self.gain[i]- background[i]
     def load_data_from_file(self, filename, normalized = False):
         '''
         Loads data from an h5py file to be plotted

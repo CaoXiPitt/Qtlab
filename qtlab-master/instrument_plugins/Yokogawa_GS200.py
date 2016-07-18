@@ -417,7 +417,7 @@ class Yokogawa_GS200(Instrument):
             logging.warning('Current value too low. Set to %f' %min_current)
             new_current = min_current
         if step_size == 0:
-            logging.warning('Trying to set to same current')
+            logging.info('Trying to set to same current')
             return False
         self._visainstrument.write(':prog:def "{name}","{data}";:prog:load "{name}"'
                                     .format(name = 'change_current.csv', 

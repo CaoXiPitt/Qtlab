@@ -48,13 +48,14 @@ class FluxSweepPlot(object):
     def plot_data_from_sweep(self, sweep):
         self.add_data_set(sweep.CURRENTS, 
                           sweep.MEASURE_BANDWIDTH, 
-                          sweep.PHASE_DATA[:,1])
+                          sweep.PHASE_DATA[:,1],
+                          dataname = 'sweep')
         self.plot_data()
     #TODO correct plot from data set    
     def add_data_set(self, currents, frequencies, phases, dataname = 'Entered Data'):
         self.ar_freq = frequencies
         self.ar_current_data = currents
-        self.ar_phase = np.array(phases)
+        self.ar_phase = phases
         self.filename = dataname
             
     def plot_data(self):
