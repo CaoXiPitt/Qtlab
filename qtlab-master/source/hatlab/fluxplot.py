@@ -9,6 +9,7 @@ import h5py
 import matplotlib.pyplot as plt
 import matplotlib.colors as color
 from matplotlib.widgets import Cursor
+from matplotlib.widgets import Slider
 import numpy as np
 
 class FluxSweepPlot(object):
@@ -102,7 +103,10 @@ class FluxSweepPlot(object):
 #        plt.xticks(x_loc, x_labels, rotation=90)
         plt.xlabel('Current (mA)')
 #       plt.xlabel('Time elapsed (minutes)')
-        
+        self.freq_axes = plt.axes([0.2, 0.05, 0.65, 0.03])
+        self.freq_slider = Slider(self.freq_axes, 'Frequency', 
+                                  0,3)#min(self.sweep_freqs), max(self.sweep_freqs),
+                             #valinit=min(self.sweep_freqs), valfmt = '%.0f Hz')
         self.cursor = Cursor(ax, useblit=True, color ='white', linewidth = 1)
         def format_coord(x,y):
             current = self.ar_current_data[int(x)]*100
