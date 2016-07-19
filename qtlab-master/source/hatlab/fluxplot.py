@@ -2,6 +2,10 @@
 """
 Created on Fri Jul 08 09:24:12 2016
 
+A module containing a class to create a color plot of a fluxsweep. It will plot
+a graph of current vs frequency with the color represetng the phase. It can 
+plot from a properly formatted h5py file, directly from a loaded fluxsweep module,
+or from data entered manually.   
 @author: HATLAB : Erick Brindock
 """
 import h5py
@@ -15,21 +19,31 @@ import numpy as np
 class FluxSweepPlot(object):
     def __init__(self, filename = None, frequencies = None, currents = None,
                  phases = None):
+        '''
+        Initializes the class.
+            Optional Args:
+                filename (string) : the path and filename to load the data from
+                frequencies (nparray) : the frequencies measured
+                currents (nparray) : the currents measured
+                phases (np2darray) : a array representing the phases (note: 
+                This is designed to work with output from the VNA containg 
+                amplitude and phase data)
+        '''
         if filename is not None:
             self.load_from_file(filename)
         elif (frequencies is not None and currents is not None and phases is not None):
             self.add_data_set(frequencies, currents, phases)
         else:
             print('Data must be loaded or added before plot can be made')
-    def get_resonant_freq(self, current):
-        index = np.where(np.absolute(self.ar_current_data - current) < .1e-9)
-        print 'current index = %s' %index
-        print self.ar_phase[index,1]
-        abs_phase = np.absolute(self.ar_phase)
-        abs_min = np.amin(abs_phase[index])
-        res_freq_index = np.where(abs_phase == abs_min)[1][0]
-        print res_freq_index
-        return self.ar_freq[res_freq_index]
+#    def get_resonant_freq(self, current):
+#        index = np.where(np.absolute(self.ar_current_data - current) < .1e-9)
+#        print 'current index = %s' %index
+#        print self.ar_phase[index,1]
+#        abs_phase = np.absolute(self.ar_phase)
+#        abs_min = np.amin(abs_phase[index])
+#        res_freq_index = np.where(abs_phase == abs_min)[1][0]
+#        print res_freq_index
+#        return self.ar_freq[res_freq_index]
     def load_from_file(self, 
                 h5py_filepath=
                 'C:\\Qtlab\\flux_sweep_data\\signal_sweep_7_6_2016_11_6'):
@@ -45,21 +59,41 @@ class FluxSweepPlot(object):
                           fp2['sweep_data'][:,1],
                           dataname = self.filename.split('\\')[-1])        
         fp2.close()
-    #TODO correct plot from sweep    
+   
     def plot_data_from_sweep(self, sweep):
+        '''
+        Plots the data from a loaded fluxsweep module.
+            Args:
+                sweep (fluxsweep) : the module to be plotted
+        '''
         self.add_data_set(sweep.CURRENTS, 
                           sweep.MEASURE_BANDWIDTH, 
                           sweep.PHASE_DATA[:,1],
                           dataname = 'sweep')
         self.plot_data()
-    #TODO correct plot from data set    
+    
     def add_data_set(self, currents, frequencies, phases, dataname = 'Entered Data'):
+        '''
+        Adds a data set to be plotted.
+            Args:
+                frequencies (nparray) : the frequencies measured
+                currents (nparray) : the currents measured
+                phases (np2darray) : a array representing the phases (note: 
+                This is designed to work with output from the VNA containg 
+                amplitude and phase data)
+            Optional Args:
+                dataname (string) : the name of the data(used in the title of 
+                the plot)
+        '''
         self.ar_freq = frequencies
         self.ar_current_data = currents
         self.ar_phase = phases
         self.filename = dataname
             
     def plot_data(self):
+        '''
+        Sets up and plots the data loaded into the class
+        '''
         # color map setting
         levels=[180, 90, 0, -90, -180]
         colors=[color.hex2color('#000000'), color.hex2color('#FF0000'), 
@@ -109,6 +143,13 @@ class FluxSweepPlot(object):
                              #valinit=min(self.sweep_freqs), valfmt = '%.0f Hz')
         self.cursor = Cursor(ax, useblit=True, color ='white', linewidth = 1)
         def format_coord(x,y):
+            '''
+            Changes the corner text to give the data behind the point the 
+            cursor is hovering over
+                Args:
+                    x (float) : the x coordinate
+                    y (float) : the y coordinate
+            '''
             current = self.ar_current_data[int(x)]*100
             frequency = self.ar_freq[int(y)]/1e9
             phase = self.ar_phase[int(x+.5)][int(y+.5)]

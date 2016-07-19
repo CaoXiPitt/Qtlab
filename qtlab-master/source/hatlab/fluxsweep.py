@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-A script file to do flux sweeps
+A module containg the data and methods needed to perform flux sweeps.  It can 
+be run as a stand alone module (ie. execfile(%PATH%\fluxsweep.py) in Qtlab), 
+using the settings under the # Settings heading.  It can also be imported so 
+certain  parameters can be changed and the test run and rerun.  The parameters 
+that cna be changed are the filename, whether the data is saved or not, and the
+currents to be swpet through.
 
 @author: Hatlab : Erick Brindock
 """
@@ -12,7 +17,7 @@ import sys
 import fluxplot
 import numpy as np
 
-# Settings
+# Settings --------------------------------------------------------------------
 VNA_NAME = 'VNA'
 CS_NAME = 'YOKO'
 MIN_CURRENT = 0.1e-3 #Ampere
@@ -37,12 +42,19 @@ date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
                                                         hour = now.hour,
                                                         minute = now.minute)
 h5py_filename = 'signal_sweep_' + date_time
-
+# End of Settings -------------------------------------------------------------
 
 # Get Instruments
 VNA = qt.instruments.get('VNA')
 YOKO = qt.instruments.get('YOKO')
 def get_instruments(vna_name = VNA_NAME, cs_name = CS_NAME):
+    '''
+    Gets references to the instruments used in the sweep
+        Args:
+            vna_name (string) : the name of the VNA as it appears in Qtlab
+            cs_name (strint) : the name of the current source as it appears in 
+            Qtlab
+    '''
     global VNA
     VNA = qt.instruments.get(vna_name)
     global YOKO
@@ -59,6 +71,10 @@ init_trigger_source = None
 init_avg_trigger = None
 old_ramp_time = None
 def store_instrument_parameters():
+    '''
+    Saves the original state of the instruments so the can be reset after the 
+    test is complete
+    '''
     global init_fstart
     init_fstart = VNA.get_fstart()
     global init_fstop
@@ -80,6 +96,10 @@ def store_instrument_parameters():
 
 ramp_time = 30
 def set_instrument_parameters():
+    '''
+    Sets the instrument parameters to those specified in the  # Settings 
+    section, so the sweep can be run.
+    '''
     VNA.set_fstart(START)
     VNA.set_fstop(STOP)
     VNA.set_ifbw(IF)
@@ -97,6 +117,9 @@ def set_currents(currents):
     '''
     Creates a list of currents to sweep through. (Note: if current_step is 
     negative it will count from max_current down to min_current)
+        Args:
+            currents (nparray) : an array of currents to be run through (note: 
+            setting this value to None will use the # Settings parameters)
     '''
     global CURRENTS
     if currents is None:
@@ -112,11 +135,18 @@ def set_currents(currents):
     
 MEASURE_BANDWIDTH = []
 def ask_frequency_data():
+    '''
+    Gets the frequencies the VNA is measuring
+    '''
     global MEASURE_BANDWIDTH
     MEASURE_BANDWIDTH = VNA.getfdata()
     
 PHASE_DATA = [] 
-def sweep_current():    
+def sweep_current():
+    '''
+    Sweeps over the currents in the module and prints out the current used in 
+    the test. It also prints the resonant frequency at the current
+    '''    
     if (YOKO.get_output_level() != CURRENTS[0]):    
         time.sleep(YOKO.change_current(CURRENTS[0])) #set current to staritng value
     i = 0
@@ -133,6 +163,13 @@ def sweep_current():
         
 
 def save_data_to_h5py(filename = None):
+    '''
+    Saves the data from a sweep to an h5py file.
+        Optional Args:
+            filename (string) : the path and filename to save the file to.
+            (note: This will default to C:\Qtlab\flux_sweep_data\
+            signal_sweep_{month}_{day}_{year}_{hour}_{minute})
+    '''
     if filename is None:
         h5py_filepath = 'C:\\Qtlab\\flux_sweep_data\\'
         now = dt.datetime.now()
@@ -150,6 +187,9 @@ def save_data_to_h5py(filename = None):
     fp.close()
     
 def reset_instrument_state():
+    '''
+    Resets the intruments to their original parameters
+    '''
     VNA.set_fstart(init_fstart)
     VNA.set_fstop(init_fstop)
     VNA.set_ifbw(init_ifbw)
@@ -158,7 +198,16 @@ def reset_instrument_state():
     VNA.set_phase_offset(init_phase_offset)
     YOKO.set_slope_interval(old_ramp_time)
 
-def run_sweep(sweep_currents = None, save_data = True):
+def run_sweep(sweep_currents = None, save_data = True, filename = None):
+    '''
+    Performs the actual test. If the module is imported this is the only method 
+    that actually needs to be called. It will get the instruments, set their 
+    parameters, run the sweep, save the data, etc.
+        Optional Args:
+            sweep_currents (nparray) : a list of currents to sweep over
+            save_data (boolean) : if true the data will be saved to an h5py file
+            filename (string) : the path and filename to save the data to
+    '''
     get_instruments()
     store_instrument_parameters()
     set_instrument_parameters()
@@ -167,16 +216,25 @@ def run_sweep(sweep_currents = None, save_data = True):
     sweep_current()
     reset_instrument_state()
     if save_data:
-        save_data_to_h5py()
+        save_data_to_h5py(filename = filename)
 #    plot = fluxplot.FluxSweepPlot(frequencies = MEASURE_BANDWIDTH,
 #                                  currents = CURRENTS,
 #                                  phases = PHASE_DATA)
 #    plot.plot_data()
 def get_resonant_frequency(current):
-        index = np.where(np.absolute(CURRENTS - current) < .1e-9)
-        abs_phase = np.absolute(PHASE_DATA)
-        abs_min = np.amin(abs_phase[index])
-        res_freq_index = np.where(abs_phase == abs_min)[2][0]
-        return MEASURE_BANDWIDTH[res_freq_index]
+    '''
+    A method to determine the resonant frequency at a specific current level
+    If the measured frequencies are too broad, harmonics may result in 
+    undesired behavior
+        Args:
+            current (float) : the current to measure the resonant frequency at
+        Output:
+            (float) : the resonant frequency of the mode
+    '''
+    index = np.where(np.absolute(CURRENTS - current) < .1e-9)
+    abs_phase = np.absolute(PHASE_DATA)
+    abs_min = np.amin(abs_phase[index])
+    res_freq_index = np.where(abs_phase == abs_min)[2][0]
+    return MEASURE_BANDWIDTH[res_freq_index]
 if __name__ == '__main__':
     run_sweep(save_data = True)        

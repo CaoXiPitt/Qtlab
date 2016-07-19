@@ -61,8 +61,8 @@ class Yokogawa_GS200(Instrument):
         
         if reset:
             self.reset()
-        #else:
-            #self.get_all()
+        else:
+            self.get_all()
 
 ##  Parameters  ##############################################################             
     def do_get_output(self):
@@ -227,51 +227,19 @@ class Yokogawa_GS200(Instrument):
         self._visainstrument.write('*RST;:sour:func curr')
     
     def get_all(self):
-        #self.get_output()
-        #self.get_output_function()
-        time.sleep(1)
-        #self.output_range()
-        #self.output_level()
-        #self.output_level_auto()
-        #self.output_protection()
-
-##  Helpers  #################################################################
-    def _log(self, string):
-        '''
-        Displays the string in the log as info
-            Input:
-                string (str) : message to be added to log
-        '''
-        logging.info(__name__ + ' : ' + string)
-        
-    def _check_input_validity(testval, strings, minval = None, maxval = None):
-        '''
-        Tests whether the testval is a valid input. It will convert the 
-        testval to a float then test against minval and maxval. If testval is 
-        too low or high, it will return minval or maxval respectively. If 
-        testval cannot be converted to a float, it will be tested against 
-        strings.
-            Input:
-                testval (float|string) : value to be tested
-                strings (iterable) : values to be compared against if testval
-                is not numerical
-                minval (float) : lower bound for a numerical testval
-                maxval (float) : upper bound for a numerical testval
-        '''
-        try:
-            testval = float(testval)
-            if (minval is not None) and testval < minval:
-                logging.warning('{} is out of bounds. Setting to {}'
-                                .fromat(testval, minval))
-                testval = minval
-            if maxval is not None and testval > maxval:
-                logging.warning('{} is out of bounds. Setting to {}'
-                                .fromat(testval, maxval))
-                testval = maxval
-        except:
-            if testval.lower() not in strings:
-                raise ValueError('%s is not a valid input' %testval)
-        return testval
+#        data = self.retrieve_data(':OUTP:STAT?;:sour:func?;:rang?;:lev?;:lev:auto?;:prot:curr?').split(',')
+#        self.set_output(data[0])
+#        self.set_output_function(data[1])
+#        self.set_output_range(data[2])
+#        self.set_output_level(data[3])
+#        self.set_output_level_auto(data[4])
+#        self.set_output_protection(data[5])
+        self.get_output()
+        self.get_output_function()
+        self.get_output_range()
+        self.get_output_level()
+        self.get_output_level_auto()
+        self.get_output_protection()
         
     def create_csv(self, stepval = 1e-3, minval=.001, maxval=.2):
         '''
@@ -368,9 +336,7 @@ class Yokogawa_GS200(Instrument):
         
     def set_slope_interval(self, rate):
         self._visainstrument.write('prog:slope %s' % rate)
-##
-#   This is the method I added on Friday  #here_olivia
-##        
+       
     def change_current(self, new_current, rate = None, min_current = MIN_CURR,
                        max_current = MAX_CURR):
         '''
@@ -434,3 +400,40 @@ class Yokogawa_GS200(Instrument):
         Advances the Yokogawa program by one step
         '''
         self._visainstrument.write(':prog:step')
+##  Helpers  #################################################################
+    def _log(self, string):
+        '''
+        Displays the string in the log as info
+            Input:
+                string (str) : message to be added to log
+        '''
+        logging.info(__name__ + ' : ' + string)
+        
+    def _check_input_validity(testval, strings, minval = None, maxval = None):
+        '''
+        Tests whether the testval is a valid input. It will convert the 
+        testval to a float then test against minval and maxval. If testval is 
+        too low or high, it will return minval or maxval respectively. If 
+        testval cannot be converted to a float, it will be tested against 
+        strings.
+            Input:
+                testval (float|string) : value to be tested
+                strings (iterable) : values to be compared against if testval
+                is not numerical
+                minval (float) : lower bound for a numerical testval
+                maxval (float) : upper bound for a numerical testval
+        '''
+        try:
+            testval = float(testval)
+            if (minval is not None) and testval < minval:
+                logging.warning('{} is out of bounds. Setting to {}'
+                                .fromat(testval, minval))
+                testval = minval
+            if maxval is not None and testval > maxval:
+                logging.warning('{} is out of bounds. Setting to {}'
+                                .fromat(testval, maxval))
+                testval = maxval
+        except:
+            if testval.lower() not in strings:
+                raise ValueError('%s is not a valid input' %testval)
+        return testval

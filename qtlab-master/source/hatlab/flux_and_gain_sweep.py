@@ -2,7 +2,14 @@
 """
 Created on Wed Jul 13 16:05:57 2016
 
-@author: HATLAB
+A module containing the necessary information and methods to run a sweep over 
+currents, frequencies, and powers.  It can be run as a stand alone module (ie.
+execfile(%PATH%\flux_and_gain_sweep.py) in Qtlab), using the settings under the 
+# Settings heading.  It can also be imported so certain parameters can be 
+changed and the test can be run and rerun. The parameters which can be changed 
+are the filename, and the currents, frequencies, and/or powers swept through.
+   
+@author: HATLAB  Erick Brindock
 """
 import qt
 import time

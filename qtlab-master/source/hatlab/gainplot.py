@@ -2,6 +2,11 @@
 """
 Created on Mon Jul 11 11:30:18 2016
 
+A module containing a class to create a line plot of gain vs frequency. It has 
+sliders to choose the current, frequency, and power data to be displayed.  The 
+data can be loaded from a properly formatted h5py file, directly from a 
+flux_and_gain_sweep module, or from entered data.
+ 
 @author: HATLAB : Erick Brindock
 """
 import matplotlib.pyplot as plt
@@ -41,11 +46,15 @@ class GainSweepPlot(object):
         elif (frequencies is not None and powers is not None and gains is not None and measurement_frequencies is not None):
             self.add_data_set(frequencies, powers, gains, measurement_frequencies)
     def plot_data_from_sweep(self, sweep):
+        '''
+        Plots data directly from a flux_and_gain_sweep module
+        '''
         self.gain = np.copy(sweep.SWEEP_DATA)
         self.add_data_set(sweep.CURRENTS,sweep.FREQUENCIES, sweep.POWERS, sweep.SWEEP_DATA,
                           sweep.MEASURE_BANDWIDTH, 
                           background = sweep.NORMALIZE_DATA)
         self.plot_data()
+        
     def plot_data(self):
         '''
         Sets up the plot window, adds sliders to the plot and displays it
