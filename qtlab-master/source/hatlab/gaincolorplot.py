@@ -15,7 +15,7 @@ import matplotlib.colors as color
 from matplotlib.widgets import Cursor
 from matplotlib.widgets import Slider
 import numpy as np
-
+from hatlab import linearfit
 class GainSweepColorPlot(object):
     '''
     Creates a color plot of a flux_and_gain_sweep. The x axis is the 
@@ -85,7 +85,10 @@ class GainSweepColorPlot(object):
                     y (float) : the y coordinate
             '''
             frequency = self.measurement_frequency[self.cindex,int(x+.5)]/1e9
-            power = self.sweep_powers[int(y+.5)]
+            sweep_index = int(y+.5)
+            if sweep_index > len(self.sweep_powers):
+                sweep_index = len(self.sweep_powers)-1
+            power = self.sweep_powers[sweep_index]
             gain = self.gain[self.cindex, self.findex, int(y+.5), 0, int(x+.5)]
             return ('Power = {} dBm, Frequency = {} GHz, gain = {}'.format(power, frequency, gain))
         self.ax.format_coord = format_coord
@@ -219,3 +222,9 @@ class GainSweepColorPlot(object):
         #TODO corret normalization for new data structure
         for i in range(self.gain.shape[0]):
             self.gain[i] = self.gain[i]- background[i]
+            
+    def fit_data(self):
+        for ci in range(self.gain.shape[0]):
+            for fi in range(self.gain.shape[1]):
+                for pi in range(self.gain.shape[2]):
+                    self.gain[ci, fi, pi,0] = linearfit.fit_data(self.gain[ci,fi,pi,0], self.measurement_frequency[0])

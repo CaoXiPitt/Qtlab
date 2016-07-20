@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import h5py
 import numpy as np
+from hatlab import linearfit
 #import gainsweep as sweep
 
 class GainSweepPlot(object):
@@ -60,8 +61,18 @@ class GainSweepPlot(object):
         Sets up the plot window, adds sliders to the plot and displays it
         '''
         # Main Data Plot Setup
-        self.data_plot, = plt.plot(self.measurement_frequency[0], self.gain[0,0,0,0])  #added another 0
+        self.data_plot, = plt.plot(self.measurement_frequency[0], 
+                                   self.gain[0,0,0,0], 'k',label = "Normalized Data")  #added another 0
+        self.fit_plot, = plt.plot(self.measurement_frequency[0], 
+                                  linearfit.fit_data(self.gain[0,0,0,0], 
+                                                     self.measurement_frequency[0]), 
+                                  'r', label = 'Linear Fit Data', linewidth = 2)                       
         plt.axis([self.measurement_frequency[0,0], self.measurement_frequency[0,-1], -5, 35])
+        plt.legend(handles = [self.data_plot, self.fit_plot])
+        self.text = plt.text(0.01, 0.9,
+                             self.to_string(self.gain[0,0,0,0], 
+                                            linearfit.fit_data(self.gain[0,0,0,0],self.measurement_frequency[0])),
+                        bbox=dict(facecolor='white', alpha=0.5), transform = plt.gca().transAxes)
         plt.gcf().subplots_adjust(left = .05, right = .95,top = .95, bottom = .15)
         self.axes = plt.gca()
         self.axes.set_xlim(self.measurement_frequency[0,0], self.measurement_frequency[0,-1])
@@ -85,7 +96,10 @@ class GainSweepPlot(object):
         self.power_slider.on_changed(self.update)
         self.freq_slider.on_changed(self.update)
         plt.show()
-            
+    
+    def to_string(self, measure, fit):
+        return "Max. Measured Gain = {} dB"\
+            "\nMax. Fit Gain = {} dB".format(np.amax(measure), np.amax(fit))             
     def update(self, val):
         '''
         Updates the data plotted when the sliders are changed
@@ -100,6 +114,11 @@ class GainSweepPlot(object):
         cindex = self.currents.index(min(self.currents, key=lambda x:abs(x-cval)))
         self.data_plot.set_ydata(self.gain[cindex][findex][pindex][0])
         self.data_plot.set_xdata(self.measurement_frequency[cindex])
+        fit = linearfit.fit_data(self.gain[cindex,findex,pindex,0], self.measurement_frequency[cindex])
+        #self.fit_plot.set_ydata(linearfit.fit_data(self.gain[cindex, findex, pindex, 0], self.measurement_frequency[0]))
+        self.fit_plot.set_ydata(fit)
+        self.fit_plot.set_xdata(self.measurement_frequency[cindex])
+        self.text.set_text(self.to_string(self.gain[cindex,findex,pindex,0],fit))
         self.axes.set_xlim(self.measurement_frequency[cindex,0], self.measurement_frequency[cindex,-1])
         if (self.power_slider.val != self.sweep_powers[pindex]):
             self.power_slider.set_val(self.sweep_powers[pindex])
