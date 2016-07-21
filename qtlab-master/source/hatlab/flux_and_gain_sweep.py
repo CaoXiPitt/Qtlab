@@ -284,18 +284,14 @@ def save_data_to_h5py(filename):
     outfile = h5py.File(filename, 'w')
     print "Saving data to %s" %filename
     outfile.create_dataset('pump_frequencies', data = FREQUENCIES)
-    print FREQUENCIES
     outfile.create_dataset('pump_powers', data = POWERS)
-    print POWERS
     outfile.create_dataset('currents' , data = CURRENTS)
-    print CURRENTS
     outfile.create_dataset('normal_data', data = NORMALIZE_DATA)
-    print NORMALIZE_DATA.shape
     outfile.create_dataset('sweep_data', data = SWEEP_DATA)
     outfile.create_dataset('measure_frequencies', data = MEASURE_BANDWIDTH)        
     outfile.close()    
     
-def run_sweep(filename = None):
+def run_sweep(filename = None, save_data = True):
     '''
     Command to initial instruments, set parameters, run sweep, save data, etc.
     This uses settings in #Settings or the most recent changes made by the set_
@@ -310,7 +306,8 @@ def run_sweep(filename = None):
     #get_normalization_data()
     sweep()
     reset_instrument_state()
-    save_data_to_h5py(filename)    
+    if save_data:
+        save_data_to_h5py(filename)    
     
 if __name__ == '__main__':
     run_sweep()    
