@@ -61,7 +61,6 @@ class GainSweepColorPlot(object):
         x_loc = [float(1601)/10*float(val) for val in range(len(x_labels))]
         plt.xticks(x_loc, x_labels)
         plt.xlabel('Pump frequency (GHz)')
-        
         # Slider setup
         self.current_axes = plt.axes([0.1, 0.05, 0.65, 0.03])
         self.current_slider = Slider(self.current_axes, 'Power', min(self.currents),
@@ -84,12 +83,15 @@ class GainSweepColorPlot(object):
                     x (float) : the x coordinate
                     y (float) : the y coordinate
             '''
-            frequency = self.measurement_frequency[self.cindex,int(x+.5)]/1e9
+            frequency_index = int(x+.5)
+            if frequency_index >= len(self.measurement_frequency):
+                frequency_index = len(self.measurement_frequency) - 1
+            frequency = self.measurement_frequency[self.cindex,frequency_index]/1e9
             sweep_index = int(y+.5)
-            if sweep_index > len(self.sweep_powers):
+            if sweep_index >= len(self.sweep_powers):
                 sweep_index = len(self.sweep_powers)-1
             power = self.sweep_powers[sweep_index]
-            gain = self.gain[self.cindex, self.findex, int(y+.5), 0, int(x+.5)]
+            gain = self.gain[self.cindex, self.findex, sweep_index, 0, frequency_index]
             return ('Power = {} dBm, Frequency = {} GHz, gain = {}'.format(power, frequency, gain))
         self.ax.format_coord = format_coord
         plt.show()

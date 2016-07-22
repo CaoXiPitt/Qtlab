@@ -132,6 +132,9 @@ def set_currents(currents):
     else:
         CURRENTS = currents
 
+def set_measure_bandwidth(start, stop):
+    VNA.set_fstart(start)
+    VNA.set_fstop(stop)
     
 MEASURE_BANDWIDTH = []
 def ask_frequency_data():
@@ -198,7 +201,7 @@ def reset_instrument_state():
     VNA.set_phase_offset(init_phase_offset)
     YOKO.set_slope_interval(old_ramp_time)
 
-def run_sweep(sweep_currents = None, save_data = True, filename = None):
+def run_sweep(sweep_currents = None, save_data = True, filename = None, measure_bandwidth = None):
     '''
     Performs the actual test. If the module is imported this is the only method 
     that actually needs to be called. It will get the instruments, set their 
@@ -207,14 +210,19 @@ def run_sweep(sweep_currents = None, save_data = True, filename = None):
             sweep_currents (nparray) : a list of currents to sweep over
             save_data (boolean) : if true the data will be saved to an h5py file
             filename (string) : the path and filename to save the data to
+            measure_bandwidth (2 element list) : [start, stop] values for the VNA measurement
     '''
     get_instruments()
     store_instrument_parameters()
-    set_instrument_parameters()
-    set_currents(sweep_currents)
-    ask_frequency_data()
-    sweep_current()
-    reset_instrument_state()
+    try:
+        set_instrument_parameters()
+        set_currents(sweep_currents)
+        if measure_bandwidth is not None:
+            set_measure_bandwidth(measure_bandwidth[0], measure_bandwidth[1])
+        ask_frequency_data()
+        sweep_current()
+    finally:
+        reset_instrument_state()
     if save_data:
         save_data_to_h5py(filename = filename)
 #    plot = fluxplot.FluxSweepPlot(frequencies = MEASURE_BANDWIDTH,
