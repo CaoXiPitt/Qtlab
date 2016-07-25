@@ -13,6 +13,9 @@ import qt
 import time
 import datetime as dt
 import h5py
+import matplotlib as plt
+import matplotlib.colors as color
+import matplotlib
 import sys
 import fluxplot
 import numpy as np
@@ -137,7 +140,7 @@ def set_measure_bandwidth(start, stop):
     VNA.set_fstop(stop)
     
 MEASURE_BANDWIDTH = []
-def ask_frequency_data():
+def get_frequency_data():
     '''
     Gets the frequencies the VNA is measuring
     '''
@@ -145,7 +148,7 @@ def ask_frequency_data():
     MEASURE_BANDWIDTH = VNA.getfdata()
     
 PHASE_DATA = [] 
-def sweep_current():
+def sweep_current(plot = True):
     '''
     Sweeps over the currents in the module and prints out the current used in 
     the test. It also prints the resonant frequency at the current
@@ -154,7 +157,7 @@ def sweep_current():
         time.sleep(YOKO.change_current(CURRENTS[0])) #set current to staritng value
     i = 0
     global PHASE_DATA
-    PHASE_DATA = np.empty((len(CURRENTS), 2, 1601))
+    PHASE_DATA = np.zeros((len(CURRENTS), 2, 1601))-180  #TODO changed to zeros and subtract 180
     for current in CURRENTS:
         print ('Testing at %s Amps' %current)
         YOKO.change_current(current)
@@ -162,6 +165,9 @@ def sweep_current():
         VNA.average(NUM_AVERAGES)
         PHASE_DATA[i] = VNA.gettrace()
         i+=1
+        if plot:
+            IMAGE.set_array(PHASE_DATA[:,0,:].transpose())
+            plt.pause(.01)
         print 'Test {}. Resonant frequency = {}'.format(i, get_resonant_frequency(current))
         
 
@@ -200,8 +206,35 @@ def reset_instrument_state():
     VNA.set_avgnum(init_num_averages)
     VNA.set_phase_offset(init_phase_offset)
     YOKO.set_slope_interval(old_ramp_time)
-
-def run_sweep(sweep_currents = None, save_data = True, filename = None, measure_bandwidth = None):
+IMAGE = None
+def setup_plot():
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.ion()
+    # color map setting
+    levels=[180, 90, 0, -90, -180]
+    colors=[color.hex2color('#000000'), color.hex2color('#FF0000'), 
+            color.hex2color('#FFFF00'), color.hex2color('#00FF00'),
+            color.hex2color('#000000')]
+    levels=levels[::-1]
+    colors=colors[::-1]
+    _cmap=color.LinearSegmentedColormap.from_list('my_cmap', colors)
+    _norm=color.Normalize(vmin=-180, vmax=180)
+    global IMAGE     
+    IMAGE = ax.imshow(PHASE_DATA[:,0,:].transpose(), interpolation='nearest', 
+                      aspect='auto', origin = 'lower', cmap=_cmap, norm=_norm, 
+                      extent = [CURRENTS[0],CURRENTS[-1], 
+                                MEASURE_BANDWIDTH[0], MEASURE_BANDWIDTH[-1]])
+    ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 20))
+    ax.xaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 4))
+    plt.title('Running Sweep')
+    fig.colorbar(IMAGE).set_label('phase(degrees)')
+    plt.xticks(rotation = 90, valfmt = '%.5f')
+    plt.xlabel('Current (mA)')
+    plt.tight_layout()
+    
+def run_sweep(sweep_currents = None, save_data = True, filename = None, 
+              measure_bandwidth = None, plot = True):
     '''
     Performs the actual test. If the module is imported this is the only method 
     that actually needs to be called. It will get the instruments, set their 
@@ -219,8 +252,10 @@ def run_sweep(sweep_currents = None, save_data = True, filename = None, measure_
         set_currents(sweep_currents)
         if measure_bandwidth is not None:
             set_measure_bandwidth(measure_bandwidth[0], measure_bandwidth[1])
-        ask_frequency_data()
-        sweep_current()
+        get_frequency_data()
+        if plot:
+            setup_plot()
+        sweep_current(plot)
     finally:
         reset_instrument_state()
     if save_data:
@@ -229,6 +264,7 @@ def run_sweep(sweep_currents = None, save_data = True, filename = None, measure_
 #                                  currents = CURRENTS,
 #                                  phases = PHASE_DATA)
 #    plot.plot_data()
+        
 def get_resonant_frequency(current):
     '''
     A method to determine the resonant frequency at a specific current level
