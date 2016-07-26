@@ -167,6 +167,7 @@ def sweep_current(plot = True):
         i+=1
         if plot:
             IMAGE.set_array(PHASE_DATA[:,0,:].transpose())
+            plt.set_title('Running Sweep at %s mA' %current*1000)
             plt.pause(.01)
         print 'Test {}. Resonant frequency = {}'.format(i, get_resonant_frequency(current))
         
@@ -225,8 +226,8 @@ def setup_plot():
                       aspect='auto', origin = 'lower', cmap=_cmap, norm=_norm, 
                       extent = [CURRENTS[0],CURRENTS[-1], 
                                 MEASURE_BANDWIDTH[0], MEASURE_BANDWIDTH[-1]])
-    ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 20))
-    ax.xaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 4))
+    ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 15))
+    ax.xaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 6))
     plt.title('Running Sweep')
     fig.colorbar(IMAGE).set_label('phase(degrees)')
     plt.xticks(rotation = 90, valfmt = '%.5f')
