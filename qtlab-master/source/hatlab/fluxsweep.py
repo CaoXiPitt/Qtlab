@@ -21,12 +21,12 @@ import numpy as np
 VNA_NAME = 'VNA'
 CS_NAME = 'YOKO'
 MIN_CURRENT = 0e-3 #Ampere
-MAX_CURRENT = .2e-3 #Ampere         1e-3  previous
-CURRENT_STEP = -.004e-3 #Ampere    .0025e-3 previous
+MAX_CURRENT = .5e-3 #Ampere         1e-3  previous
+CURRENT_STEP = .005e-3 #Ampere    .0025e-3 previous
 RAMP_RATE = .01 #Ampere/second
 YOKO_PROGRAM_FILE_NAME = 'fluxsweep.csv'
 START = 4e9 #Hz
-STOP =8e9 #Hz
+STOP =10e9 #Hz
 IF = 3e3 #Hz
 NUM_AVERAGES = 12 #Counts
 #trform = 'PLOG'
@@ -124,7 +124,6 @@ def set_currents(currents = None):
     global CURRENTS
     if currents is None:
         backwards = CURRENT_STEP < 0
-        print backwards
         CURRENTS = np.append(np.arange(MIN_CURRENT, 
                                        MAX_CURRENT, 
                                        abs(CURRENT_STEP)),

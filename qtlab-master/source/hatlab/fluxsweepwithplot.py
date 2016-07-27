@@ -24,8 +24,8 @@ import numpy as np
 VNA_NAME = 'VNA'
 CS_NAME = 'YOKO'
 MIN_CURRENT = 0e-3 #Ampere
-MAX_CURRENT = .2e-3 #Ampere         1e-3  previous
-CURRENT_STEP = -.004e-3 #Ampere    .0025e-3 previous
+MAX_CURRENT = .5e-3 #Ampere         1e-3  previous
+CURRENT_STEP = -.005e-3 #Ampere    .0025e-3 previous
 RAMP_RATE = .01 #Ampere/second
 YOKO_PROGRAM_FILE_NAME = 'fluxsweep.csv'
 START = 4e9 #Hz
@@ -160,6 +160,8 @@ def sweep_current(plot = True):
     PHASE_DATA = np.zeros((len(CURRENTS), 2, 1601))-180  #TODO changed to zeros and subtract 180
     print type(PHASE_DATA[:,0,:])
     print CURRENTS[0]
+    if plot:
+            setup_plot()
     for current in CURRENTS:
         print ('Testing at %s Amps' %current)
         YOKO.change_current(current)
@@ -168,9 +170,12 @@ def sweep_current(plot = True):
         PHASE_DATA[i] = VNA.gettrace()
         i+=1
         if plot:
-            IMAGE.set_array(PHASE_DATA[:,0,:].transpose())
-            plt.set_title('Running Sweep at %s mA' %current*1000)
-            plt.pause(.01)
+            try:
+                IMAGE.set_array(PHASE_DATA[:,0,:].transpose())
+                plt.set_title('Running Sweep at %s mA' %current*1000)
+                plt.pause(.01)
+            except:
+                print'failed2'
         print 'Test {}. Resonant frequency = {}'.format(i, get_resonant_frequency(current))
         
 
@@ -213,30 +218,35 @@ def reset_instrument_state():
     YOKO.set_slope_interval(old_ramp_time)
 IMAGE = None
 def setup_plot():
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    plt.ion()
-    # color map setting
-    levels=[180, 90, 0, -90, -180]
-    colors=[color.hex2color('#000000'), color.hex2color('#FF0000'), 
-            color.hex2color('#FFFF00'), color.hex2color('#00FF00'),
-            color.hex2color('#000000')]
-    levels=levels[::-1]
-    colors=colors[::-1]
-    _cmap=color.LinearSegmentedColormap.from_list('my_cmap', colors)
-    _norm=color.Normalize(vmin=-180, vmax=180)
-    global IMAGE    
-    IMAGE = ax.imshow(PHASE_DATA[:,0,:].transpose(), interpolation='nearest', 
-                      aspect='auto', origin = 'lower', cmap=_cmap, norm=_norm, 
-                      extent = [CURRENTS[0],CURRENTS[-1], 
-                                MEASURE_BANDWIDTH[0], MEASURE_BANDWIDTH[-1]])
-    ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 15))
-    ax.xaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 6))
-    plt.title('Running Sweep')
-    fig.colorbar(IMAGE).set_label('phase(degrees)')
-    plt.xticks(rotation = 90, valfmt = '%.5f')
-    plt.xlabel('Current (mA)')
-    plt.tight_layout()
+    try:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        plt.ion()
+        # color map setting
+        levels=[180, 90, 0, -90, -180]
+        colors=[color.hex2color('#000000'), color.hex2color('#FF0000'), 
+                color.hex2color('#FFFF00'), color.hex2color('#00FF00'),
+                color.hex2color('#000000')]
+        levels=levels[::-1]
+        colors=colors[::-1]
+        _cmap=color.LinearSegmentedColormap.from_list('my_cmap', colors)
+        _norm=color.Normalize(vmin=-180, vmax=180)
+        print "one"
+        global IMAGE
+        IMAGE = ax.imshow(PHASE_DATA[:,0,:].transpose(), interpolation='nearest', 
+                          aspect='auto', origin = 'lower', cmap=_cmap, norm=_norm, 
+                          extent = [CURRENTS[0],CURRENTS[-1], 
+                                    MEASURE_BANDWIDTH[0], MEASURE_BANDWIDTH[-1]])
+        print 'two'
+        ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 15))
+        ax.xaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 6))
+        plt.title('Running Sweep')
+        fig.colorbar(IMAGE).set_label('phase(degrees)')
+        plt.xticks(rotation = 90, valfmt = '%.5f')
+        plt.xlabel('Current (mA)')
+        plt.tight_layout()
+    except:
+        print 'failed'
     
 def run_sweep(sweep_currents = None, save_data = True, filename = None, 
               measure_bandwidth = None, plot = True):
@@ -258,8 +268,7 @@ def run_sweep(sweep_currents = None, save_data = True, filename = None,
         if measure_bandwidth is not None:
             set_measure_bandwidth(measure_bandwidth[0], measure_bandwidth[1])
         get_frequency_data()
-        if plot:
-            setup_plot()
+        
         sweep_current(plot)
     finally:
         reset_instrument_state()
