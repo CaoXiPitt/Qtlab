@@ -22,7 +22,7 @@ VNA_NAME = 'VNA'
 CS_NAME = 'YOKO'
 MIN_CURRENT = 0e-3 #Ampere
 MAX_CURRENT = .5e-3 #Ampere         1e-3  previous
-CURRENT_STEP = .005e-3 #Ampere    .0025e-3 previous
+CURRENT_STEP = -.005e-3 #Ampere    .0025e-3 previous
 RAMP_RATE = .01 #Ampere/second
 YOKO_PROGRAM_FILE_NAME = 'fluxsweep.csv'
 START = 4e9 #Hz
@@ -34,6 +34,7 @@ trform = 'PLOG'
 PHASE_OFFSET = -180
 TRIGGER_SOURCE = 'bus'
 AVG_TRIGGER = 1
+AVERAGING = True
 h5py_filepath = 'C:\\Qtlab\\flux_sweep_data\\'
 now = dt.datetime.now()
 date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
@@ -69,6 +70,7 @@ init_num_averages = None
 init_phase_offset = None
 init_trigger_source = None
 init_avg_trigger = None
+init_averaging = None
 old_ramp_time = None
 def store_instrument_parameters():
     '''
@@ -90,7 +92,9 @@ def store_instrument_parameters():
     global init_trigger_source
     init_trigger_source = VNA.get_trigger_source()
     global init_avg_trigger
-    init_avg_trigger = VNA.get_avg_trigger()    
+    init_avg_trigger = VNA.get_avg_trigger()
+    global init_averaging
+    init_averaging = int(VNA.get_averaging())
     global old_ramp_time
     old_ramp_time = YOKO.get_slope_interval()
 
@@ -107,6 +111,7 @@ def set_instrument_parameters():
     VNA.set_phase_offset(PHASE_OFFSET)
     VNA.set_trigger_source(TRIGGER_SOURCE)
     VNA.set_avg_trigger(AVG_TRIGGER)
+    VNA.set_averaging(AVERAGING)
     # Set parameters YOKO
     global ramp_time
     ramp_time = YOKO.set_ramp_intervals(step = CURRENT_STEP, rate = RAMP_RATE)
@@ -198,9 +203,14 @@ def reset_instrument_state():
     VNA.set_avgnum(init_num_averages)
     VNA.set_phase_offset(init_phase_offset)
     VNA.set_trigger_source(init_trigger_source)
-    VNA.set_avg_trigger(init_avr_trigger)
+    VNA.set_avg_trigger(init_avg_trigger)
+    VNA.set_averaing(init_averaging)
     YOKO.set_slope_interval(old_ramp_time)
 
+def reset_trigger():
+    VNA.set_avg_trigger(init_avg_trigger)
+    VNA.set_trigger_source(init_trigger_source)
+    VNA.set_averaging(init_averaging)
 def run_sweep(sweep_currents = None, save_data = True, filename = None):
     '''
     Performs the actual test. If the module is imported this is the only method 

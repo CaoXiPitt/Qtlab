@@ -80,7 +80,7 @@ class Agilent_ENA_5071C(Instrument):
 
         self.add_parameter('avg_trigger',flags=Instrument.FLAG_GETSET, 
                            type=types.BooleanType)
-
+        self.add_parameter('averaging', type=types.Type)
         self.add_parameter('time_sweep', flags=Instrument.FLAG_GETSET,
                            type=types.FloatType)
 
@@ -202,7 +202,7 @@ class Agilent_ENA_5071C(Instrument):
         self.get_math()
         self.get_sweep_type()
         self.get_electrical_delay()
-        
+        self.get_averaging()
     def wait(self, wait_time):
         '''
         
@@ -220,6 +220,13 @@ class Agilent_ENA_5071C(Instrument):
 #            except:
 #                cont=True
 #        return
+            
+    def do_get_averaging(self):
+        return self._visainstrument.ask(':SENS1:AVER?')
+        
+    def do_set_averaging(self, enable):
+        self._visainstrument.write(':SENS1:AVER %s' %enable)
+        
     def do_get_phase_offset(self):
         '''
         Reads the phase offset
