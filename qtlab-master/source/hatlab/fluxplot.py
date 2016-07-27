@@ -9,7 +9,7 @@ or from data entered manually.
 @author: HATLAB : Erick Brindock
 """
 import h5py
-
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as color
 from matplotlib.widgets import Cursor
@@ -44,7 +44,7 @@ class FluxSweepPlot(object):
 #        res_freq_index = np.where(abs_phase == abs_min)[1][0]
 #        print res_freq_index
 #        return self.ar_freq[res_freq_index]
-    def load_from_file(self, 
+    def load_data_from_file(self, 
                 h5py_filepath=
                 'C:\\Qtlab\\flux_sweep_data\\signal_sweep_7_6_2016_11_6'):
         '''
@@ -107,7 +107,7 @@ class FluxSweepPlot(object):
         
         if self.ar_current_data[0] > self.ar_current_data[-1]:
             self.ar_phase = self.ar_phase[::-1]
-            
+        #TODO try to get extent working wiht cursor    
         # Setup Plot
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -122,6 +122,7 @@ class FluxSweepPlot(object):
         y_labels = np.linspace(self.ar_freq[0], self.ar_freq[-1], 21)/1e9
         y_loc = [float(1601)/20*float(val) for val in range(len(y_labels))]
         plt.yticks(np.array(y_loc), y_labels)
+#        ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 20))
         plt.ylabel('frequency(GHz)')
         
         # X axis setup
@@ -135,12 +136,11 @@ class FluxSweepPlot(object):
         x_loc = [len(self.ar_current_data)/float(num_x_ticks)*i for i in range(num_x_ticks)]
         plt.xticks(x_loc, x_labels*1000, rotation=90)
 #        plt.xticks(x_loc, x_labels, rotation=90)
+#        ax.set_xlim(.0001, .00025)
+#        ax.xaxis.set_major_locator(matplotlib.ticker.LinearLocator(numticks = 4))
         plt.xlabel('Current (mA)')
 #       plt.xlabel('Time elapsed (minutes)')
-        self.freq_axes = plt.axes([0.2, 0.05, 0.65, 0.03])
-        self.freq_slider = Slider(self.freq_axes, 'Frequency', 
-                                  0,3)#min(self.sweep_freqs), max(self.sweep_freqs),
-                             #valinit=min(self.sweep_freqs), valfmt = '%.0f Hz')
+        
         self.cursor = Cursor(ax, useblit=True, color ='white', linewidth = 1)
         def format_coord(x,y):
             '''
@@ -150,11 +150,18 @@ class FluxSweepPlot(object):
                     x (float) : the x coordinate
                     y (float) : the y coordinate
             '''
-            current = self.ar_current_data[int(x)]*100
-            frequency = self.ar_freq[int(y)]/1e9
-            phase = self.ar_phase[int(x+.5)][int(y+.5)]
+            current_index = int(x+.5)
+            if current_index >= len(self.ar_current_data):
+                current_index = len(self.ar_current_data) - 1
+            frequency_index = int(y + .5)
+            if frequency_index >= len(self.ar_freq):
+                frequency_index = len(self.ar_freq) - 1
+            current = self.ar_current_data[current_index]*100
+            frequency = self.ar_freq[frequency_index]/1e9
+            phase = self.ar_phase[current_index][frequency_index]
             return ('Current = {} mA, Frequency = {} GHz, Phase = {}'.format(current, frequency, phase))
         ax.format_coord = format_coord
+        plt.tight_layout()
         plt.show()
         
     def get_data_point(self):

@@ -12,8 +12,8 @@ import h5py
 import numpy as np
 
 # Settings --------------------------------------------------------------------
-vna_name = 'VNA'
-signal_gen_name = 'GEN'
+VNA_NAME = 'VNA'
+GEN_NAME = 'GEN'
 
 MIN_POWER = -40 #dBm total power
 MAX_POWER = -32 #dBm total power 
@@ -35,13 +35,13 @@ wait = .6*num_averages #seconds (.6*num_averages? [for IF=3e3])
 trform = 'PLOG' #'MLOG'
 ELECTRICAL_DELAY = 63e-9 #sec
 # End of Settings -------------------------------------------------------------     
-VNA = qt.instruments.get('VNA')
-GEN = qt.instruments.get('GEN')
-def get_instruments(name = vna_name):
+VNA = None
+GEN = None
+def get_instruments(name = VNA_NAME):
     global VNA
     VNA = qt.instruments.get(name)
     global GEN
-    GEN = qt.instruments.get('GEN')
+    GEN = qt.instruments.get(GEN_NAME)
 
 # get original VNA settings
 init_fstart = VNA.get_fstart()

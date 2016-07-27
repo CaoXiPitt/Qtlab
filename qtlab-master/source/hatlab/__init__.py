@@ -1,1 +1,8 @@
-__all__ = ['flux_and_gain_sweep', 'fluxplot', 'gainplot']
+__all__ = ['autofluxsweep',
+			'drsweeptest',
+			'flux_and_gain_sweep', 
+			'fluxplot', 
+			'gainplot', 
+			'gaincolorplot',
+			'fluxsweep',
+			'gainsweep']

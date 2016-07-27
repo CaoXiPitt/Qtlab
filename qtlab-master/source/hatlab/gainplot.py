@@ -89,7 +89,7 @@ class GainSweepPlot(object):
                                    max(self.sweep_powers), 
                             valinit=min(self.sweep_powers), valfmt = '%.1f dBm')
         self.current_axes = plt.axes([0.2, 0.01, 0.65, 0.03])
-        self.current_slider = Slider(self.current_axes, 'Power', min(self.currents),
+        self.current_slider = Slider(self.current_axes, 'Current', min(self.currents),
                                    max(self.currents), 
                             valinit=min(self.currents), valfmt = '%.7f A')
         self.current_slider.on_changed(self.update)
