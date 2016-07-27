@@ -107,6 +107,7 @@ class FluxSweepPlot(object):
         
         if self.ar_current_data[0] > self.ar_current_data[-1]:
             self.ar_phase = self.ar_phase[::-1]
+            self.ar_current_data = self.ar_current_data[::-1]
         #TODO try to get extent working wiht cursor    
         # Setup Plot
         fig = plt.figure()
