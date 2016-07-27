@@ -206,6 +206,7 @@ def reset_instrument_state():
     VNA.set_trform(init_trform)
     VNA.set_avgnum(init_num_averages)
     VNA.set_phase_offset(init_phase_offset)
+    VNA.set_trigger_source(init_trigger_source)
     YOKO.set_slope_interval(old_ramp_time)
 IMAGE = None
 def setup_plot():
