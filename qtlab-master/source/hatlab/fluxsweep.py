@@ -211,6 +211,7 @@ def reset_trigger():
     VNA.set_avg_trigger(init_avg_trigger)
     VNA.set_trigger_source(init_trigger_source)
     VNA.set_averaging(init_averaging)
+    
 def run_sweep(sweep_currents = None, save_data = True, filename = None):
     '''
     Performs the actual test. If the module is imported this is the only method 
