@@ -281,7 +281,7 @@ def save_data_to_h5py(filename):
         filename = h5py_filepath + h5py_filename
     else:
         filename = h5py_filepath + filename
-    outfile = h5py.File(filename, 'w')
+    outfile = h5py.File(filename, 'w-')
     print "Saving data to %s" %filename
     outfile.create_dataset('pump_frequencies', data = FREQUENCIES)
     outfile.create_dataset('pump_powers', data = POWERS)

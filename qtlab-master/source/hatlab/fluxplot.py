@@ -30,7 +30,7 @@ class FluxSweepPlot(object):
                 amplitude and phase data)
         '''
         if filename is not None:
-            self.load_from_file(filename)
+            self.load_data_from_file(filename)
         elif (frequencies is not None and currents is not None and phases is not None):
             self.add_data_set(frequencies, currents, phases)
         else:

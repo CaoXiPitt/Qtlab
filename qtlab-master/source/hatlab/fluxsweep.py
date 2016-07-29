@@ -14,7 +14,7 @@ import time
 import datetime as dt
 import h5py
 import sys
-import fluxplot
+from hatlab import fluxplot
 import numpy as np
 
 # Settings --------------------------------------------------------------------
@@ -186,7 +186,7 @@ def save_data_to_h5py(filename = None):
                                                         minute = now.minute)
         h5py_filename = 'signal_sweep_' + date_time
         filename = h5py_filepath + h5py_filename
-    fp = h5py.File(filename, 'w')
+    fp = h5py.File(filename, 'w-')
     fp.create_dataset('sweep_data', data=PHASE_DATA)
     fp.create_dataset('measure_frequencies', data=MEASURE_BANDWIDTH)
     fp.create_dataset('currents', data = CURRENTS)    
