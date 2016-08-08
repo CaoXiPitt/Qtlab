@@ -80,7 +80,7 @@ class Agilent_ENA_5071C(Instrument):
 
         self.add_parameter('avg_trigger',flags=Instrument.FLAG_GETSET, 
                            type=types.BooleanType)
-        self.add_parameter('averaging', type=types.Type)
+        self.add_parameter('averaging', type=types.BooleanType)
         self.add_parameter('time_sweep', flags=Instrument.FLAG_GETSET,
                            type=types.FloatType)
 

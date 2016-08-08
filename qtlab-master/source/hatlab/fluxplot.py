@@ -56,7 +56,8 @@ class FluxSweepPlot(object):
         fp2 = h5py.File(self.filename, 'r')
         self.add_data_set(fp2['currents'][:],
                           fp2['measure_frequencies'][:],
-                          fp2['sweep_data'][:,1],
+                          fp2['sweep_data'][:,0],
+                          #fp2['sweep_data'][:,1],
                           dataname = self.filename.split('\\')[-1])        
         fp2.close()
    
@@ -96,6 +97,7 @@ class FluxSweepPlot(object):
         '''
         # color map setting
         levels=[180, 90, 0, -90, -180]
+        levels=[-40, -35, -30, -25, -20, -15, -10]
         colors=[color.hex2color('#000000'), color.hex2color('#FF0000'), 
                 color.hex2color('#FFFF00'), color.hex2color('#00FF00'),
                 color.hex2color('#000000')]
@@ -113,8 +115,9 @@ class FluxSweepPlot(object):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         im = ax.imshow(self.ar_phase.transpose(), interpolation='nearest', aspect='auto', 
-                   origin = 'lower', cmap=_cmap, norm=_norm)
-                  
+                   origin = 'lower', cmap = 'hot', vmin = -40)
+#        im = ax.imshow(self.ar_phase.transpose(), interpolation='nearest', aspect='auto', 
+#                   origin = 'lower', cmap=_cmap, norm=_norm)
         fig.colorbar(im).set_label('phase(degrees)')
         plt.title('Plot from ' + self.filename)
         

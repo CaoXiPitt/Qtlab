@@ -21,12 +21,12 @@ import numpy as np
 VNA_NAME = 'VNA'
 CS_NAME = 'YOKO'
 MIN_CURRENT = 0e-3 #Ampere
-MAX_CURRENT = .5e-3 #Ampere         1e-3  previous
-CURRENT_STEP = -.005e-3 #Ampere    .0025e-3 previous
+MAX_CURRENT = .6e-3 #Ampere         1e-3  previous
+CURRENT_STEP = .01e-3 #Ampere    .0025e-3 previous
 RAMP_RATE = .01 #Ampere/second
 YOKO_PROGRAM_FILE_NAME = 'fluxsweep.csv'
-START = 4e9 #Hz
-STOP =10e9 #Hz
+START = 4.7e9 #Hz
+STOP =5.5e9 #Hz
 IF = 3e3 #Hz
 NUM_AVERAGES = 12 #Counts
 #trform = 'PLOG'
@@ -42,7 +42,7 @@ date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
                                                         year = now.year,
                                                         hour = now.hour,
                                                         minute = now.minute)
-h5py_filename = 'signal_sweep_' + date_time
+h5py_filename = 'signal_sweep_forward' + date_time
 # End of Settings -------------------------------------------------------------
 
 # Get Instruments
@@ -177,7 +177,8 @@ def save_data_to_h5py(filename = None):
             signal_sweep_{month}_{day}_{year}_{hour}_{minute})
     '''
     if filename is None:
-        h5py_filepath = 'C:\\Qtlab\\flux_sweep_data\\'
+        #h5py_filepath = 'C:\\Qtlab\\flux_sweep_data\\'
+        h5py_filepath = 'C:\\Users\\HATLAB\\Box Sync\\Data\\Cooldown_2016_08_05\\JPC_00012\\Flux_Sweep\\'
         now = dt.datetime.now()
         date_time = '{month}_{day}_{year}_{hour}_{minute}'.format(month = now.month,
                                                         day = now.day,
@@ -204,7 +205,7 @@ def reset_instrument_state():
     VNA.set_phase_offset(init_phase_offset)
     VNA.set_trigger_source(init_trigger_source)
     VNA.set_avg_trigger(init_avg_trigger)
-    VNA.set_averaing(init_averaging)
+    VNA.set_averaging(init_averaging)
     YOKO.set_slope_interval(old_ramp_time)
 
 def reset_trigger():

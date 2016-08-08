@@ -113,7 +113,7 @@ class Mini_CircuitsSwitch(Instrument):
         elif mode == 'S_pp':
             self.set_switch('P','00001000')
         elif mode == 'S_si':
-            self.set_switch('P','00010010')
+            self.set_switch('P','0001  ')
         elif mode == 'S_is':
             self.set_switch('P','01010110')
         elif mode == 'S_ip':
@@ -124,6 +124,8 @@ class Mini_CircuitsSwitch(Instrument):
             self.set_switch('P','00000110')
         elif mode == 'S_sp':
             self.set_switch('P','00011000')
+        elif mode == 'S_rr':
+            self.set_switch('P','10000011')
             
         
     def do_get_portvalue(self):
